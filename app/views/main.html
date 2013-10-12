@@ -1,0 +1,28 @@
+<h1>Mappify map creator</h1>
+<div id="mui-main">
+  <div id="mui-concepts">
+    <div class="mui-concept-list">
+      <div class="gridStyle" ng-grid="conceptGridOptions"></div>
+    </div>
+    <div class="mui-concept-buttons">
+      <button class="btn" ng-click="createConcept()">+</button>
+      <button ng-click="deleteConcept()" ng-show="selectionMade()" class="btn">-</button>
+    </div>
+  </div>
+  <div class="tabbable tabs-left">
+    <ul class="nav nav-tabs mui-tabs-right-style">
+      <li class="mui-tabs-right-style"><a ng-click="activeTab='constraints'"><i class="icon-filter"/></a></li>
+      <li class="mui-tabs-right-style"><a ng-click="activeTab='ui'"><i class="icon-comment"/></a></li>
+    </ul>
+    <div class="tab-content">
+      <div ng-show="activeTab=='constraints'" ng-controller="ConceptConstraintsCtrl">
+         <div ng-include="'views/concept-constraints.html'"></div>
+      </div>
+    </div>
+    <div class="tab-content">
+      <div ng-show="activeTab=='ui'" ng-controller="UiSettingsCtrl">
+        <div ng-include="'views/ui-settings.html'"></div>
+    </div>
+  </div>
+  <div class="clear-float"/>
+</div>

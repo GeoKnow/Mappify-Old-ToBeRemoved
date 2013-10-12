@@ -1,0 +1,26 @@
+<div id="mui-tab-content-ui">
+  <div id="mui-marker" class="gridStyle" ng-grid="markerGridOptions"></div>
+  <div id="mui-query">
+    <div>attribute SPARQL query</div>
+    <textarea ng-model="query"></textarea>
+  </div>
+  <div id="mui-template-vars">
+    <div>variables</div>
+    <ul>
+      <li ng-repeat="var in queryVars(query)">{{var}}</li>
+    </ul>
+  </div>
+  <div id="mui-sponate">
+    <div>sponate mapping 
+      <span ng-switch="validJSON(sponateMapping)">
+        <i ng-switch-when="false" class="icon-remove-sign"/>
+        <i ng-switch-when="true" class="icon-ok-sign"/>
+      </span>
+    </div>
+    <textarea ng-model="sponateMapping"></textarea>
+  </div>
+  <div id="mui-template">
+    <div>pop-over template</div>
+    <textarea ng-model="infoTemplate"></textarea>
+  </div>
+</div>

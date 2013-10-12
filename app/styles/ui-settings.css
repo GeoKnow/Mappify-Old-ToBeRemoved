@@ -1,0 +1,48 @@
+div#mui-tab-content-ui {
+  height: 11em
+}
+
+div#mui-marker {
+  float: left;
+}
+
+
+div#mui-marker.gridStyle {
+    width: 7em !important; 
+}
+
+div#mui-marker input {
+  margin-top: 
+  vertical-align: middle;
+}
+
+div#mui-query {
+  float: left;
+  margin-left: 1em;
+  margin-bottom: 0;
+  width: 12em;
+  height: 10em;
+}
+
+div#mui-query textarea, div#mui-sponate textarea, div#mui-template textarea{
+  width: 13em;
+  height: 10em;
+}
+
+div#mui-template-vars {
+  height: 10em;
+  float: left;
+}
+
+div#mui-sponate {
+  height: 10em;
+  width: 13em;
+  float:left;
+  margin-left: 1em;
+}
+
+div#mui-template {
+  float: left;
+  height: 10em;
+}
+

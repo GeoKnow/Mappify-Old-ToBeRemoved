@@ -1,0 +1,62 @@
+body {
+    width: 100% !important;
+    background: #fafafa;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #333;
+}
+html {
+    width: 100% !important;
+}
+
+div.container {
+    margin: 0 !important;
+    padding: 0 50px !important;
+    width: calc(100% - 100px) !important;
+}
+
+.gridStyle {
+    border: 1px solid rgb(212,212,212);
+    width: 15em; 
+    height: 10em;
+}
+
+.clear-float{
+    clear: both;
+}
+
+div#mui-main {
+    width: 90%;
+    height: 10.2em;
+    margin: 50px 0;
+    font-size: 18px;
+    font-weight: 200;
+    line-height: 30px;
+    background-color: #eee;
+    border-radius: 6px;
+    padding: 60px;
+}
+
+#mui-main div#mui-concepts {
+    width: 15.1em;
+    float: left;
+    overflow: auto;
+}
+
+ul.mui-tabs-right-style {
+    margin-top: 5.5em;
+    margin-right: 5px !important;
+    border: 0px hidden !important;
+}
+li.mui-tabs-right-style {
+    border: solid;
+    border-width: 1px 1px 1px 0 !important;
+    border-color: rgb(212,212,212);
+    border-radius: 0px 6px 6px 0px;
+    margin: 0px 5px 5px 0px;
+    padding: 10px 10px 0px 10px;
+}
+li.mui-tabs-right-style a {
+    padding: 0 !important;
+    margin-top: 0 !important;
+    min-width: 0 !important;
+}
