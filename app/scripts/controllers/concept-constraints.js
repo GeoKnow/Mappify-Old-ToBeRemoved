@@ -10,12 +10,6 @@ angular.module('mui2App')
     $scope.selectedFacetValues = [];
     $scope.minMax = [0, 0];
     $scope.initMinMax = [0, 1];
-    $scope.$on('conceptDeleted', function(event, e){
-      $scope.facetValues = [];
-      $scope.minMax = [0, 0];
-      $scope.initMinMax = [0, 1];
-      $scope.disabledTabs = [];
-    });
 
     /** facets table settings */
     $scope.facetGridOptions = {
@@ -42,7 +36,8 @@ angular.module('mui2App')
             if (numericVals.length > 0) {
               var min = Math.min.apply(Math, numericVals);
               var max = Math.max.apply(Math, numericVals);
-              $('.mui-concept-constr-slider')[0].value = null;
+              // resetting slide this way doesn't work
+              // $('.mui-concept-constr-slider')[0].value = null;
               $scope.initMinMax = [min, max];
               $scope.minMax = [min, max];
               $scope.disabledTabs = [];
@@ -66,12 +61,25 @@ angular.module('mui2App')
     }
 
     // -- ui functions --
+    /* TODO: a little more needs to be done here, e.g.
+     * - setting a CSS class to change the style of the disabled tab
+     * - check if this changes are reset correctly when catching the
+     *   'conceptDeleted' event
+     * - reset acitve tab to the value tab after changing a facet
+     */
     $scope.setActive = function(tabName) {
       if ($scope.disabledTabs.indexOf(tabName) == -1) {
         $scope.activeConstrTab = tabName;
       };
     }
 
+    // -- event handling --
+    $scope.$on('conceptDeleted', function(event, e){
+      $scope.facetValues = [];
+      $scope.minMax = [0, 0];
+      $scope.initMinMax = [0, 1];
+      $scope.disabledTabs = [];
+    });
 
     // --debugging --
     $scope.currConceptsStr = "";
