@@ -21,8 +21,16 @@
         <link rel="stylesheet" href="styles/concept-constraints.css">
         <link rel="stylesheet" href="styles/ui-settings.css">
         <link rel="stylesheet" href="styles/map-settings.css">
+        <link rel="stylesheet" type="text/css" href="bower_components/openlayers/theme/default/style.css">
         <link rel="stylesheet" href="bower_components/jquery-ui/themes/smoothness/jquery-ui.css">
-
+    <script type="text/javascript">
+        var map; //, layer;
+        function init(){
+            map = new OpenLayers.Map('map');
+            layer = new OpenLayers.Layer.OSM( "Simple OSM Map");
+            map.addLayer(layer);
+        }
+    </script>
         <!-- endbuild -->
 </head>
   <body ng-app="mui2App">

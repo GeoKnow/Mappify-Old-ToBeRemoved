@@ -26,9 +26,14 @@
     </div>
   </div>
   <div class="clear-float"/>
+  <hr class="map-delitimter" />
   <div id="mui-map">
     <div ng-controller="MapSettingsCtrl">
-      <div ng-include="'views/map-settings.html'"></div>
+      <button class="btn map-sec-btn" ng-class="{'btn-success': initBtn.active}"
+          ng-click="toggleInitBoxDraw()">set initial map section</button>
+      <button class="btn map-sec-btn" ng-class="{'btn-success': maxBtn.active}"
+          ng-click="toggleMaxBoxDraw()">set maximal map section</button>
+      <div id="map" class="olMap"></div>
     </div>
   </div>
 </div>
