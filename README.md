@@ -6,8 +6,8 @@ It enables a facet based definition of points of interests based on a SPARQL-acc
 
 
 This should be as easy as defining a initial and maximal map section to consider...
-![Chosing initial map section](imgs/png/map_init.png?raw=true)
-![Chosing maximal map section](imgs/png/map_max.png?raw=true)
+![Choosing initial map section](imgs/png/map_init.png?raw=true)
+![Choosing maximal map section](imgs/png/map_max.png?raw=true)
 
 ...setting up concepts that are a combination of facets with optional restrictions, e.g. value range restrictions, ...
 
