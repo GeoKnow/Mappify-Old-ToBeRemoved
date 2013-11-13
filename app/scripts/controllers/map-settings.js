@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('mui2App')
-  .controller('MapSettingsCtrl', function ($scope) {
+  .controller('MapSettingsCtrl', function($scope) {
     // call map initialization function defined in index.html
     init();
     

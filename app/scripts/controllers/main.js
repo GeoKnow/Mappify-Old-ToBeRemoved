@@ -73,7 +73,8 @@ var Concept = function() {
 };
 
 var Facet = function(conceptName, num) {
-  this.name = conceptName.replace(/ /g, '') + "Facet" + num;
+  //this.name = conceptName.replace(/ /g, '') + "Facet" + num;
+  this.name = "Facet" + num;
 
   // init values
   this.values = [];
