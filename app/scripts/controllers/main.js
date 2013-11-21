@@ -107,11 +107,6 @@ angular.module('mui2App')
         this.infoTemplate = null;
     };
     Concept.prototype = {
-      // dummy attributes
-      dummyQuery : 'SELECT ?r { ?r a <http://linkedgeodata.org/ontology/Castle>}',
-      dummySparqlService : new Jassa.sparql.SparqlServiceHttp('http://localhost/sparql'),
-
-      // methods
       init : function() {
         this.name = 'Concept ' + muiConceptIdCounter;
         this.id = 'concept' + muiConceptIdCounter++;
