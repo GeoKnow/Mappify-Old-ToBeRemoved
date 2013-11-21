@@ -17,6 +17,10 @@ angular.module('mui2App')
       OpenLayers.Event.stop(event);
     };
 
+    $scope.$on('mui-facets-deselect-up', function(event) {
+      event.stopPropagation();
+      $scope.$broadcast('mui-facets-deselect-down');
+    });
 
     /*
      * promise functions
@@ -47,7 +51,6 @@ angular.module('mui2App')
         }); 
 
         feature.data.overflow = 'auto';
-        console.log($scope.selectedConcepts[0].infoTemplate);
         feature.data.popupContentHTML = strTemplateParser.resolve(
             $scope.selectedConcepts[0].infoTemplate, res);
         feature.data.icon = new OpenLayers.Icon($scope.selectedConcepts[0].markerImgPath, size, offset);
@@ -57,25 +60,16 @@ angular.module('mui2App')
       }
     }
 
-    var debug = function(res) {
-      debugger;
-    }
-
-
     /**
      * Facet class
      */
     var Facet = function(uri) {
       this.uri = uri;
+      this.childFacets = [];
+      this.selected = false;
+      this.collapsed = true;
     }
     Facet.prototype = {
-      // attributes
-      selected : false,
-      collapsed : true,
-      childFacets: [],
-      childFacetsResolved: false,
-
-      // methods
       toggleSelected : function() {
         if (this.selected == false) {
           $scope.$emit('mui-facets-deselect-up');
@@ -83,37 +77,21 @@ angular.module('mui2App')
         this.selected = !this.selected;
       },
 
-      getNumNodes : function() {
-        if (!this.childFacetsResolved) {
-          return 1;
-        } else {
-          return this.childFacets.length
-        }
-      },
-
       toggleCollapsed : function() {
-        if (this.collapsed == true && this.childFacetsResolved == false) {
-          // FIXME: this looks ugly but I don't hava a better idea now
-          //facetService.getChildFacetsJSON(this.uri, $scope.selectedConcepts[0].constraints);
-          // TODO: implement fetching child facets
-          //console.log('fetch child facets');
-          //this.childFacetsResolved = true;
-        }
         this.collapsed = !this.collapsed;
       },
 
-      /**
-       * Used to determine if the uncollapse sign (+) should be displayed.
-       * If the child facets are not resolved, yet the uncollapse sign is
-       * displayed. It will only be hidden in case there are no child factes.
-       */
-      hasChildFacets : function() {
-        if (this.childFacetsResolved && facet.childFacets.length == 0) {
-          return false;
-        } else {
-          return true;
+      addChildFacet : function(childFacet) {
+        this.childFacets.push(childFacet);
+      },
+
+      addChildFacets : function(childFacets) {
+        var i = 0;
+        for (i; i < childFacets.length; i++) {
+          var childFacet = childFacets[i];
+          this.addChildFacet(childFacet);
         }
-      }
+      },
     };
 
 
@@ -124,17 +102,11 @@ angular.module('mui2App')
 
     var Concept = function() {
         this.init();
+        this.markerImgPath = null;
+        this.sponateMapping = null;
+        this.infoTemplate = null;
     };
     Concept.prototype = {
-      // attributes
-      name : null,
-      id : null,
-      unCollapsedTree : {},
-      constraints : [],
-      selectionPath : [],
-      markerImgPath : null,
-      sponateMapping : null,
-      infoTemplate : null,
       // dummy attributes
       dummyQuery : 'SELECT ?r { ?r a <http://linkedgeodata.org/ontology/Castle>}',
       dummySparqlService : new Jassa.sparql.SparqlServiceHttp('http://localhost/sparql'),
@@ -143,11 +115,11 @@ angular.module('mui2App')
       init : function() {
         this.name = 'Concept ' + muiConceptIdCounter;
         this.id = 'concept' + muiConceptIdCounter++;
-        this.unCollapsedTree[$scope.rootFacet] = {};
       },
       showOnMap : function() {
         sponateService.addMap({
           "name" : $scope.selectedConcepts[0].id,
+          // FIXME: use eval instead of JSON.parse
           "template" : [ JSON.parse($scope.selectedConcepts[0].sponateMapping) ],
           "from" : $scope.selectedConcepts[0].query
         });
@@ -165,9 +137,39 @@ angular.module('mui2App')
     // even though there can only be one selected concept (or none) a list is expected
     $scope.selectedConcepts = [];
     $scope.facets = [];
-    $scope.rootFacet = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
-    $scope.rootPath = [$scope.rootFacet];
-    // $scope.facetTree = new FacetTree();
+    /*
+     * Dummy facet initialization
+     * tree should look sth like this:
+     * rdf:type
+     *   |- dbpprop:name
+     *   |    `- rdfs:label
+     *   |- dcterms:subject
+     *   |- rdfs:label
+     *   |- dbpedia-owl:location
+     *   |    `- rdfs:label
+     *   |- dbpprop:latitude
+     *   `- dbpprop:longitude
+     */
+     // create dbpprop:name
+     var dbpName_rdfsLabel = new Facet('rdfs:label');
+     var dbpName = new Facet('dbp:name');
+     dbpName.addChildFacet(dbpName_rdfsLabel);
+     // create dcterms:subject
+     var dctermsSubject = new Facet('dcterms:subject');
+     // create rdfs:label
+     var rdfsLabel = new Facet('rdfs:label');
+     // create dbpedia-owl:location
+     var dboLocation_rdfsLabel = new Facet('rdfs:label');
+     var dboLocation = new Facet('dbo:location');
+     dboLocation.addChildFacet(dboLocation_rdfsLabel);
+     // create dbpprop:latitude
+     var dbpLatitude = new Facet('dbp:latitude');
+     // create dbpprop:longitude
+     var dbpLongitude = new Facet('dbp:longitude');
+     // add all facets to root facet rdf:type
+     var rdfType = new Facet('rdf:type');
+     rdfType.addChildFacets([dbpName, dctermsSubject, rdfsLabel, dboLocation, dbpLatitude, dbpLongitude]);
+     $scope.facets.push(rdfType);
 
     /*
      * ui-related settings
