@@ -7,10 +7,12 @@ angular.module('mui2App')
     
     // -- settings --
     map.setCenter(
-        new OpenLayers.LonLat(12.35, 51.35).transform(
+      //  8.85, 53.08  --> Bremen
+      // 12.35, 51.35 --> Leipzig
+        new OpenLayers.LonLat(8.85, 53.08).transform(
             new OpenLayers.Projection('EPSG:4326'),
             map.getProjectionObject()
-          ), 10
+          ), 10.3
       );
 
     // -- layers for initial and maximal map section --
@@ -30,8 +32,8 @@ angular.module('mui2App')
 
     map.addLayer(initBoxLayer);
     map.addLayer(maxBoxLayer);
-    map.addControl(new OpenLayers.Control.LayerSwitcher());
-    map.addControl(new OpenLayers.Control.MousePosition()); 
+    // map.addControl(new OpenLayers.Control.LayerSwitcher());
+    // map.addControl(new OpenLayers.Control.MousePosition()); 
 
     $scope.initBoxDrawCtrl = new OpenLayers.Control.DrawFeature(initBoxLayer,
         OpenLayers.Handler.RegularPolygon, {

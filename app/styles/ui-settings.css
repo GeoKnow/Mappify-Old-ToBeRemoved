@@ -46,3 +46,7 @@ div#mui-template {
   height: 10em;
 }
 
+button.mui-ui-save {
+  margin-top: 10em;
+  margin-left: 20px;
+}

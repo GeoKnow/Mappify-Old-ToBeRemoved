@@ -1,24 +1,29 @@
 <h1>Mappify map creator</h1>
 <div id="mui-main">
   <div id="mui-concepts">
+    <!-- concept grid -->
     <div class="mui-concept-list">
       <div class="gridStyle" ng-grid="conceptGridOptions"></div>
     </div>
+    <!-- concept grid buttons -->
     <div class="mui-concept-buttons">
       <button class="btn" ng-click="createConcept()">+</button>
       <button ng-click="deleteConcept()" ng-show="selectionMade()" class="btn">-</button>
     </div>
   </div>
   <div class="tabbable tabs-left">
+    <!-- concept filter/ui switch buttons -->
     <ul class="nav nav-tabs mui-tabs-right-style">
       <li class="mui-tabs-right-style"><a ng-click="activeTab='constraints'"><i class="icon-filter"/></a></li>
       <li class="mui-tabs-right-style"><a ng-click="activeTab='ui'"><i class="icon-comment"/></a></li>
     </ul>
+    <!-- remaining concept filter widgets -->
     <div class="tab-content">
       <div ng-show="activeTab=='constraints'" ng-controller="ConceptConstraintsCtrl">
          <div ng-include="'views/concept-constraints.html'"></div>
       </div>
     </div>
+    <!-- remaining gui setting widgets -->
     <div class="tab-content">
       <div ng-show="activeTab=='ui'" ng-controller="UiSettingsCtrl">
         <div ng-include="'views/ui-settings.html'"></div>
@@ -27,6 +32,7 @@
   </div>
   <div class="clear-float"/>
   <hr class="map-delitimter" />
+  <!-- the map -->
   <div id="mui-map">
     <div ng-controller="MapSettingsCtrl">
       <button class="btn map-sec-btn" ng-class="{'btn-success': initBtn.active}"

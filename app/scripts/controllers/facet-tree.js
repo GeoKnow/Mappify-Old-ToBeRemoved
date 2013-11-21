@@ -3,30 +3,13 @@
 angular.module('mui2App')
     .controller('FacetTreeCtrl', function($scope) {
         $scope.rowHeight = 30;
-        $scope.panelWidth = '10em'
-
-        var getNodes_ = function() {
-            if (this.collapsed != true) {
-                return this.nodes;
-            }
-        };
-
-        var getNumNodes_ = function() {
-            return this.nodes.length;
-        };
-
-        var toggleSelected_ = function() {
-            if (this.selected == false) {
-                $scope.$emit('mui-facets-deselect-up');
-            }
-            this.selected = !this.selected;
-        };
+        $scope.panelWidth = '10em';
 
         $scope.$on('mui-facets-deselect-up', function(event) {
             event.stopPropagation();
             $scope.$broadcast('mui-facets-deselect-down');
         });
-
+/*
         $scope.facetTree = [
             {
                 nodeId: '/',
@@ -83,13 +66,13 @@ angular.module('mui2App')
                 toggleSelected: toggleSelected_,
                 nodes: []
             }
-        ];
+        ];*/
     })
 
     .directive('facetTreeItem', function($compile) {
         return {
             restrict: 'E',
-            scope: { facets: '=', depth: '='},
+            scope: { facets: '=', view: '=', path: '=', depth: '='},
             templateUrl: 'views/facet-tree-item.html',
             compile: function(tElement, tAttr, transclude) {
                 var contents = tElement.contents().remove();
@@ -101,14 +84,8 @@ angular.module('mui2App')
                     }
 
                     compiledContents(scope, function(clone, scope) {
-                        scope.toggleCollapsed = function(facet) {
-                            facet.collapsed = !facet.collapsed;
-                        };
-                        scope.hasChildren = function(facet) {
-                            if (facet.nodes.length != 0) return true;
-                            else return false;
-                        };
-
+                        // event handler that deselects all facets of the
+                        // scope at hand
                         scope.$on('mui-facets-deselect-down', function() {
                             for(var facetNr in scope.facets) {
                                 scope.facets[facetNr].selected = false;

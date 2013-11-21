@@ -2,13 +2,13 @@
   <div class="mui-facet-cell">
     <div class="mui-facet-row" ng-class="{'mui-selected': facet.selected==true}">
       <span ng-show="facet.getNumNodes() > 0">
-        <span style="padding-left: {{12*depth}}px" class="mui-collapse" ng-show="facet.collapsed"><a ng-click="toggleCollapsed(facet)">+</a></span>
-        <span style="padding-left: {{12*depth}}px" class="mui-collapse" ng-show="!facet.collapsed"><a ng-click="toggleCollapsed(facet)">-</a></span>
+        <span style="padding-left: {{12*depth}}px" class="mui-collapse" ng-show="facet.collapsed"><a ng-click="facet.toggleCollapsed()">+</a></span>
+        <span style="padding-left: {{12*depth}}px" class="mui-collapse" ng-show="!facet.collapsed"><a ng-click="facet.toggleCollapsed()">-</a></span>
       </span>
       <div style="margin-left: {{12*depth+20}}px" class="mui-facet-name" ng-click="facet.toggleSelected()">
-        {{facet.nodeId}} {{depth}} {{facet.nodes.length}} {{hasChildren(facet)}}
+        {{facet.uri}} {{depth}}
       </div>
     </div>
   </div>
-  <facet-tree-item ng-show="!facet.collapsed" facets="facet.getNodes()" depth="depth+1"></facet-tree-item>
+  <!--facet-tree-item ng-show="!facet.collapsed" view="view" path="" depth="depth+1"></facet-tree-item-->
 </div>

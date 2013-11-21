@@ -2,7 +2,7 @@
   <div id="mui-marker" class="gridStyle" ng-grid="markerGridOptions"></div>
   <div id="mui-query">
     <div>attribute SPARQL query</div>
-    <textarea ng-model="query"></textarea>
+    <textarea ng-model="query" ng-change="updateQueryStatus(query)"></textarea>
   </div>
   <div id="mui-template-vars">
     <div>variables</div>
@@ -17,10 +17,12 @@
         <i ng-switch-when="true" class="icon-ok-sign"/>
       </span>
     </div>
-    <textarea ng-model="sponateMapping"></textarea>
+    <textarea ng-model="sponateMapping" ng-change="updateMappingStatus(sponateMapping)"></textarea>
   </div>
   <div id="mui-template">
     <div>pop-over template</div>
-    <textarea ng-model="infoTemplate"></textarea>
+    <textarea ng-model="infoTemplate" ng-change="updateTemplateStatus(infoTemplate)"></textarea>
   </div>
+  <button disabled ng-show="!uiSettingsComplete()" class="btn mui-ui-save">save</button>
+  <button ng-click="saveUiSettings()" ng-show="uiSettingsComplete()" class="btn btn-success mui-ui-save">save</button>
 </div>
