@@ -31,8 +31,15 @@ angular.module('mui2App')
       var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
       var icon = new OpenLayers.Icon($scope.selectedConcepts[0].markerImgPath, size, offset);
       var popupSize = new OpenLayers.Size(1000,1000);
-      var markers = map.getLayersByName('mui-markers')[0];  // defined in index.html
-      map.setLayerIndex(markers, 99);
+      var layerName = 'mui-markers-' + $scope.selectedConcepts[0].id;
+      var markerLayers = map.getLayersByName('mui-markers');
+      for (var i = 0; i < markerLayers.length; i++) {
+        var layer = markerLayers[i];
+        map.removeLayer(layer);
+      }
+      var markers = new OpenLayers.Layer.Markers(layerName);
+      map.addLayer(markers);
+      //map.setLayerIndex(markers, 99);
 
       var i = 0;
       for (i; i < queryResults.length; i++) {
@@ -112,14 +119,25 @@ angular.module('mui2App')
         this.id = 'concept' + muiConceptIdCounter++;
       },
       showOnMap : function() {
+        var name = $scope.selectedConcepts[0].id;
+
+        // this is a hack used to reset the sponate service to be able to
+        // re-define an existing mapping
+        if (sponateService[name] !== undefined) {
+          delete sponateService[name];
+          var service = sponateService.service;
+          var prefixes = sponateService.context.getPrefixMap().getJson();
+
+          sponateService.initialize(service, prefixes);
+        }
         sponateService.addMap({
-          "name" : $scope.selectedConcepts[0].id,
-          // FIXME: use eval instead of JSON.parse
+          "name" : name,
+          // TODO: use eval instead of JSON.parse
           "template" : [ JSON.parse($scope.selectedConcepts[0].sponateMapping) ],
           "from" : $scope.selectedConcepts[0].query
         });
 
-        var res = sponateService[$scope.selectedConcepts[0].id].find().asList();
+        var res = sponateService[name].find().asList();
         res.done(showResultsOnMap);
       }
     };
