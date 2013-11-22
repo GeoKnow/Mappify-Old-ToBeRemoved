@@ -13,15 +13,17 @@ angular.module('mui2App')
     $scope.data = data;
     $scope.template = template;
     $scope.selectedMarkers = [];
-    $scope.query = "SELECT * WHERE {\n    ?r <http://linkedgeodata.org/ontology/castle_type> ?ctype .\n    ?r rdfs:label ?label .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .}";
+    // $scope.query = "SELECT * WHERE {\n    ?r <http://linkedgeodata.org/ontology/castle_type> ?ctype .\n    ?r rdfs:label ?label .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .}";
+    $scope.query = 'SELECT * WHERE {\n    ?r rdfs:label ?label .\n    ?r foaf:depiction ?d .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .}';
     /*
     <http://linkedgeodata.org/ontology/castle_type>
     <http://linkedgeodata.org/ontology/version> (int)
     <http://www.w3.org/2000/01/rdf-schema#label> 
     */
     $scope.templateVars = new TemplateVars($scope.query);
-    $scope.sponateMapping = '{"id": "?r", "type": "?ctype",\n"name" : "?label",\n"lat" : "?lat",\n"long": "?long"}';
-    $scope.infoTemplate = "{{name}} ({{type}})";
+    // $scope.sponateMapping = '{"id": "?r", "type": "?ctype",\n"name" : "?label",\n"lat" : "?lat",\n"long": "?long"}';
+    $scope.sponateMapping = '{"id": "?r", "name" : "?label",\n"pic": "?d",\n"lat" : "?lat",\n"long": "?long"}';
+    $scope.infoTemplate = '{{name}}\n<img src="{{pic}}">';
 
     $scope.markerGridOptions = {
         data: 'data',

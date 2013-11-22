@@ -56,6 +56,7 @@ angular.module('mui2App')
      * initialization
      */
     var endpointUri = 'http://10.23.0.1/sparql';
-    var defaultGraphs = ['http://linkedgeodata.org/'];
+    // var defaultGraphs = ['http://linkedgeodata.org/'];
+    var defaultGraphs = ['http://dbpedia.org'];
     return new SparqlService(endpointUri, defaultGraphs);
   });

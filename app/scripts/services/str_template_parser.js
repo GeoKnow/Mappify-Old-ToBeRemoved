@@ -19,7 +19,12 @@ angular.module('mui2App')
                                              // first {{
                 var attr = inputStr.substr(startPos, closingPos-startPos);
                 if (queryResults[attr] !== 'undefined') {
-                    inputStr = inputStr.replace('{{' + attr + '}}', queryResults[attr]);
+                    var attrValue = queryResults[attr];
+                    // remove leading and trailing angle brackets
+                    if (attrValue.startsWith('<') && attrValue.endsWith('>')) {
+                        attrValue = attrValue.substring(1, attrValue.length-1);
+                    }
+                    inputStr = inputStr.replace('{{' + attr + '}}', attrValue);
                 }
                 parsePos += 2; // just in case the {{ was not replaced
             }
