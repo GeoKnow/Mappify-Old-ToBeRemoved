@@ -7,12 +7,12 @@ angular.module('mui2App')
     
     // -- settings --
     map.setCenter(
-      //  8.85, 53.08  --> Bremen
-      // 12.35, 51.35 --> Leipzig
+      //  8.85, 53.08  (10.3) --> Bremen
+      // 12.35, 51.35  (10)   --> Leipzig
         new OpenLayers.LonLat(8.85, 53.08).transform(
             new OpenLayers.Projection('EPSG:4326'),
             map.getProjectionObject()
-          ), 10.3
+          ), 4
       );
 
     // -- layers for initial and maximal map section --
@@ -28,7 +28,7 @@ angular.module('mui2App')
           fillColor: '#FF0000',
           fillOpacity: 0.15
         }),
-    });
+      });
 
     map.addLayer(initBoxLayer);
     map.addLayer(maxBoxLayer);
@@ -37,27 +37,25 @@ angular.module('mui2App')
 
     $scope.initBoxDrawCtrl = new OpenLayers.Control.DrawFeature(initBoxLayer,
         OpenLayers.Handler.RegularPolygon, {
-          handlerOptions: { sides: 4, irregular: true }
-        }
-      );
+        handlerOptions: { sides: 4, irregular: true }
+      });
     map.addControl($scope.initBoxDrawCtrl);
 
     $scope.maxBoxDrawCtrl = new OpenLayers.Control.DrawFeature(maxBoxLayer,
         OpenLayers.Handler.RegularPolygon, {
-          handlerOptions: { sides: 4, irregular: true }
-        }
-      );
+        handlerOptions: { sides: 4, irregular: true }
+      });
     map.addControl($scope.maxBoxDrawCtrl);
 
     // -- ui --
     $scope.initBtn = {
       'active': false,
       'coords': null
-    }
+    };
     $scope.maxBtn = {
       'active': false,
       'coords': null
-    }
+    };
 
     // event listener to prevent the drawing of multiple rectangles
     $scope.featureRemover = function(event) {
@@ -69,8 +67,11 @@ angular.module('mui2App')
     // event listener to get the current values of the box coords
     $scope.coordListener = function(event) {
       var geometry = event.feature.geometry;
-      if (event.object.name == 'initial box') $scope.initBtn.coords = geometry;
-      else if (event.object.name == 'maximal box') $scope.maxBtn.coords = geometry;
+      if (event.object.name === 'initial box') {
+        $scope.initBtn.coords = geometry;
+      } else if (event.object.name === 'maximal box') {
+        $scope.maxBtn.coords = geometry;
+      }
     };
     initBoxLayer.events.register('featureadded', initBoxLayer, $scope.coordListener);
     maxBoxLayer.events.register('featureadded', maxBoxLayer, $scope.coordListener);

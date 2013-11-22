@@ -10,7 +10,6 @@ angular.module('mui2App')
       // TODO: also add default graph when https://github.com/GeoKnow/Sponate/issues/1
       // is closed
       this.conn = Jassa.sponate.ServiceUtils.createSparqlHttp(endpointUri, defaultGraphs);
-      Jassa.creta
     };
     SparqlService.prototype = {
       // attributes

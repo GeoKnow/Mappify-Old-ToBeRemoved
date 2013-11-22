@@ -15,12 +15,7 @@ angular.module('mui2App')
     $scope.selectedMarkers = [];
     // $scope.query = "SELECT * WHERE {\n    ?r <http://linkedgeodata.org/ontology/castle_type> ?ctype .\n    ?r rdfs:label ?label .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .}";
     $scope.query = 'SELECT * WHERE {\n    ?r rdfs:label ?label .\n    ?r foaf:depiction ?d .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .}';
-    /*
-    <http://linkedgeodata.org/ontology/castle_type>
-    <http://linkedgeodata.org/ontology/version> (int)
-    <http://www.w3.org/2000/01/rdf-schema#label> 
-    */
-    $scope.templateVars = new TemplateVars($scope.query);
+
     // $scope.sponateMapping = '{"id": "?r", "type": "?ctype",\n"name" : "?label",\n"lat" : "?lat",\n"long": "?long"}';
     $scope.sponateMapping = '{"id": "?r", "name" : "?label",\n"pic": "?d",\n"lat" : "?lat",\n"long": "?long"}';
     $scope.infoTemplate = '{{name}}\n<img src="{{pic}}">';
@@ -37,7 +32,7 @@ angular.module('mui2App')
         columnDefs: [{cellTemplate: $scope.template, field: 'img', displayName: 'marker'}],
 
         // TODO: adapt
-        afterSelectionChange : function(rowItem, event) {
+        afterSelectionChange : function(rowItem) {
           /* this function will be called twice when selecting a new row item:
            * once for unselecting the 'old' item and again for selecting the
            * new item. And I'm only interested in the second case.
@@ -46,7 +41,7 @@ angular.module('mui2App')
             $scope.selectedMarkers.pop(rowItem.entity);
           }
         }
-    }
+      };
 
     /** function for live displaying variables used in the SPARQL query */
     $scope.queryVars = function(query) {
@@ -55,7 +50,7 @@ angular.module('mui2App')
       var match;
       while (match = regex.exec(query)) {
         var res = match[2];
-        if (matches.indexOf(res) == -1) {
+        if (matches.indexOf(res) === -1) {
           matches.push(res);
         }
       }
@@ -77,7 +72,7 @@ angular.module('mui2App')
     };
     $scope.uiSettingsComplete = function() {
       //console.log($scope.query.blank());
-      if ($scope.selectedConcepts.length == 1 && $scope.selectedMarkers.length == 1 && !$scope.query.blank()) {
+      if ($scope.selectedConcepts.length === 1 && $scope.selectedMarkers.length === 1 && !$scope.query.blank()) {
         return true;
       } else {
         return false;
@@ -99,7 +94,7 @@ angular.module('mui2App')
 
     $scope.updateTemplateStatus = function(template) {
       $scope.infoTemplate = template;
-    }
+    };
   });
 
 /**
@@ -128,8 +123,3 @@ var data = [
   {'img': 'img/markers/zoo.png'},
   {'img': 'img/markers/zoom.png'}
 ];
-
-var defaultQuery = "SELECT * WHERE {\n    ?? a ?class .\n    ?? rdfs:label ?label\n}";
-var TemplateVars = function(queryTemplate) {
-  this.queryTemplate = queryTemplate;
-}

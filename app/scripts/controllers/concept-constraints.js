@@ -26,13 +26,15 @@ angular.module('mui2App')
            */
           if (rowItem.selected) {
             $scope.facetValues = rowItem.entity.getValues();
-            var vals = []
-            var numericVals = []
+            var vals = [];
+            var numericVals = [];
             for (var i = 0; i < rowItem.entity.getValues().length; i++) {
               var val = rowItem.entity.getValues()[i].value;
-              if (typeof val == 'number') numericVals.push(val);
+              if (typeof val === 'number') {
+                numericVals.push(val);
+              }
               vals.push(val);
-            };
+            }
             if (numericVals.length > 0) {
               var min = Math.min.apply(Math, numericVals);
               var max = Math.max.apply(Math, numericVals);
@@ -47,7 +49,7 @@ angular.module('mui2App')
             }
           }
         }
-    };
+      };
 
     /** constraints table settings */
     $scope.constraintValuesGridOptions = {
@@ -58,7 +60,7 @@ angular.module('mui2App')
         multiSelect: true,
         selectedItems: $scope.selectedFacetValues,
         columnDefs: [{field: 'value', displayName: 'select values'}]
-    }
+      };
 
     // -- ui functions --
     /* TODO: a little more needs to be done here, e.g.
@@ -68,10 +70,10 @@ angular.module('mui2App')
      * - reset acitve tab to the value tab after changing a facet
      */
     $scope.setActive = function(tabName) {
-      if ($scope.disabledTabs.indexOf(tabName) == -1) {
+      if ($scope.disabledTabs.indexOf(tabName) === -1) {
         $scope.activeConstrTab = tabName;
-      };
-    }
+      }
+    };
 
     // -- event handling --
     $scope.$on('conceptDeleted', function(event, e){
@@ -82,12 +84,12 @@ angular.module('mui2App')
     });
 
     // --debugging --
-    $scope.currConceptsStr = "";
+    $scope.currConceptsStr = '';
     $scope.test = function() {
       console.log($scope.concepts);
-      $scope.currConceptsStr = "";
+      $scope.currConceptsStr = '';
       for (var i = $scope.concepts.length - 1; i >= 0; i--) {
-        $scope.currConceptsStr += $scope.concepts[i].name + " ";
-      };
-    }
+        $scope.currConceptsStr += $scope.concepts[i].name + ' ';
+      }
+    };
   });

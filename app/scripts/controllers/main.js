@@ -6,7 +6,7 @@ angular.module('mui2App')
      * event handlers
      */
     var markerClick = function (event) {
-      if (this.popup == null) {
+      if (this.popup === null) {
         this.popup = this.createPopup(this.closeBox);
         map.addPopup(this.popup);
         this.popup.show();
@@ -29,7 +29,6 @@ angular.module('mui2App')
       // general setup of markers parameters
       var size = new OpenLayers.Size(40,40);
       var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
-      var icon = new OpenLayers.Icon($scope.selectedConcepts[0].markerImgPath, size, offset);
       var popupSize = new OpenLayers.Size(1000,1000);
       var layerName = 'mui-markers-' + $scope.selectedConcepts[0].id;
       var markerLayers = map.getLayersByName('mui-markers');
@@ -41,13 +40,12 @@ angular.module('mui2App')
       map.addLayer(markers);
       //map.setLayerIndex(markers, 99);
 
-      var i = 0;
-      for (i; i < queryResults.length; i++) {
+      for (var i = 0; i < queryResults.length; i++) {
         var res = queryResults[i];
         var long = res.long;
         var lat = res.lat;
         var longLat = new OpenLayers.LonLat(long, lat).transform(
-            new OpenLayers.Projection("EPSG:4326"), new OpenLayers.Projection("EPSG:900913"));
+            new OpenLayers.Projection('EPSG:4326'), new OpenLayers.Projection('EPSG:900913'));
         
         var feature = new OpenLayers.Feature(markers, longLat);
 
@@ -55,17 +53,17 @@ angular.module('mui2App')
         feature.popupClass = OpenLayers.Class(OpenLayers.Popup.FramedCloud, {
             'autoSize': true,
             'maxSize': popupSize
-        }); 
+          });
 
         feature.data.overflow = 'auto';
         feature.data.popupContentHTML = strTemplateParser.resolve(
             $scope.selectedConcepts[0].infoTemplate, res);
         feature.data.icon = new OpenLayers.Icon($scope.selectedConcepts[0].markerImgPath, size, offset);
         var marker = feature.createMarker();
-        marker.events.register("mousedown", feature, markerClick);
+        marker.events.register('mousedown', feature, markerClick);
         markers.addMarker(marker);
       }
-    }
+    };
 
     /**
      * Facet class
@@ -75,10 +73,10 @@ angular.module('mui2App')
       this.childFacets = [];
       this.selected = false;
       this.collapsed = true;
-    }
+    };
     Facet.prototype = {
       toggleSelected : function() {
-        if (this.selected == false) {
+        if (this.selected === false) {
           $scope.$emit('mui-facets-deselect-up');
         }
         this.selected = !this.selected;
@@ -112,7 +110,7 @@ angular.module('mui2App')
         this.markerImgPath = null;
         this.sponateMapping = null;
         this.infoTemplate = null;
-    };
+      };
     Concept.prototype = {
       init : function() {
         this.name = 'Concept ' + muiConceptIdCounter;
@@ -131,10 +129,10 @@ angular.module('mui2App')
           sponateService.initialize(service, prefixes);
         }
         sponateService.addMap({
-          "name" : name,
+          'name' : name,
           // TODO: use eval instead of JSON.parse
-          "template" : [ JSON.parse($scope.selectedConcepts[0].sponateMapping) ],
-          "from" : $scope.selectedConcepts[0].query
+          'template' : [ JSON.parse($scope.selectedConcepts[0].sponateMapping) ],
+          'from' : $scope.selectedConcepts[0].query
         });
 
         var res = sponateService[name].find().asList();
@@ -163,26 +161,26 @@ angular.module('mui2App')
      *   |- dbpprop:latitude
      *   `- dbpprop:longitude
      */
-     // create dbpprop:name
-     var dbpName_rdfsLabel = new Facet('rdfs:label');
-     var dbpName = new Facet('dbp:name');
-     dbpName.addChildFacet(dbpName_rdfsLabel);
-     // create dcterms:subject
-     var dctermsSubject = new Facet('dcterms:subject');
-     // create rdfs:label
-     var rdfsLabel = new Facet('rdfs:label');
-     // create dbpedia-owl:location
-     var dboLocation_rdfsLabel = new Facet('rdfs:label');
-     var dboLocation = new Facet('dbo:location');
-     dboLocation.addChildFacet(dboLocation_rdfsLabel);
-     // create dbpprop:latitude
-     var dbpLatitude = new Facet('dbp:latitude');
-     // create dbpprop:longitude
-     var dbpLongitude = new Facet('dbp:longitude');
-     // add all facets to root facet rdf:type
-     var rdfType = new Facet('rdf:type');
-     rdfType.addChildFacets([dbpName, dctermsSubject, rdfsLabel, dboLocation, dbpLatitude, dbpLongitude]);
-     $scope.facets.push(rdfType);
+    // create dbpprop:name
+    var dbpName_rdfsLabel = new Facet('rdfs:label');
+    var dbpName = new Facet('dbp:name');
+    dbpName.addChildFacet(dbpName_rdfsLabel);
+    // create dcterms:subject
+    var dctermsSubject = new Facet('dcterms:subject');
+    // create rdfs:label
+    var rdfsLabel = new Facet('rdfs:label');
+    // create dbpedia-owl:location
+    var dboLocation_rdfsLabel = new Facet('rdfs:label');
+    var dboLocation = new Facet('dbo:location');
+    dboLocation.addChildFacet(dboLocation_rdfsLabel);
+    // create dbpprop:latitude
+    var dbpLatitude = new Facet('dbp:latitude');
+    // create dbpprop:longitude
+    var dbpLongitude = new Facet('dbp:longitude');
+    // add all facets to root facet rdf:type
+    var rdfType = new Facet('rdf:type');
+    rdfType.addChildFacets([dbpName, dctermsSubject, rdfsLabel, dboLocation, dbpLatitude, dbpLongitude]);
+    $scope.facets.push(rdfType);
 
     /*
      * ui-related settings
@@ -194,15 +192,15 @@ angular.module('mui2App')
     $scope.activeTab = 'constraints';
 
     /** concepts table settings */
-    $scope.conceptGridOptions = { 
-        data: 'concepts',
-        enableCellSelection: true,
-        enableRowSelection: true,
-        enableCellEdit: true,
-        multiSelect: false,
-        selectedItems: $scope.selectedConcepts,
-        columnDefs: [{field: 'name', displayName: 'concepts', enableCellEdit: true}],
-        afterSelectionChange : function(rowItem, event) {
+    $scope.conceptGridOptions = {
+        data : 'concepts',
+        enableCellSelection : true,
+        enableRowSelection : true,
+        enableCellEdit : true,
+        multiSelect : false,
+        selectedItems : $scope.selectedConcepts,
+        columnDefs : [{field : 'name', displayName : 'concepts', enableCellEdit : true}],
+        afterSelectionChange : function(rowItem) {
           /* this function will be called twice when selecting a new row item:
            * once for unselecting the 'old' item and again for selecting the
            * new item. And I'm only interested in the second case.
@@ -211,7 +209,7 @@ angular.module('mui2App')
             // rowItem.entity.getFacets();
           }
         }
-    };
+      };
 
     /*
      * scope functions
@@ -228,4 +226,4 @@ angular.module('mui2App')
       $scope.selectedConcepts.splice(0,1);
       $scope.$broadcast('conceptDeleted');
     };
-  })
+  });
