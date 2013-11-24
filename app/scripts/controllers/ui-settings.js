@@ -9,16 +9,66 @@ angular.module('mui2App')
      *   - http://ngmodules.org/modules/angular-highlightjs
      */
     // -- settings --
-    // TODO: this uses just dummy data
     $scope.data = data;
     $scope.template = template;
-    $scope.selectedMarkers = [];
-    // $scope.query = "SELECT * WHERE {\n    ?r <http://linkedgeodata.org/ontology/castle_type> ?ctype .\n    ?r rdfs:label ?label .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .}";
-    $scope.query = 'SELECT * WHERE {\n    ?r rdfs:label ?label .\n    ?r foaf:depiction ?d .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .}';
 
-    // $scope.sponateMapping = '{"id": "?r", "type": "?ctype",\n"name" : "?label",\n"lat" : "?lat",\n"long": "?long"}';
-    $scope.sponateMapping = '{"id": "?r", "name" : "?label",\n"pic": "?d",\n"lat" : "?lat",\n"long": "?long"}';
-    $scope.infoTemplate = '{{name}}\n<img src="{{pic}}">';
+    // TODO: remove this; not needed since the same value is held in
+    // $scope.markerGridOptions.selectedItems
+    $scope.selectedMarkers = [];
+
+    // var query = "SELECT * WHERE {\n    ?r <http://linkedgeodata.org/ontology/castle_type> ?ctype .\n    ?r rdfs:label ?label .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .}";
+    var query = 'SELECT * WHERE {\n    ?r rdfs:label ?label .\n    ?r foaf:depiction ?d .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .\n    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .}';
+    $scope.query = query;
+
+    // var sponateMapping = '{"id": "?r", "type": "?ctype",\n"name" : "?label",\n"lat" : "?lat",\n"long": "?long"}';
+    var sponateMapping = '{"id": "?r", "name" : "?label",\n"pic": "?d",\n"lat" : "?lat",\n"long": "?long"}';
+    $scope.sponateMapping = sponateMapping;
+
+    var infoTemplate = '{{name}}\n<img src="{{pic}}">';
+    $scope.infoTemplate = infoTemplate;
+
+    $scope.$on('mui-concept-selection-changed', function() {
+      var selConcept = $scope.selectedConcepts[0];
+
+      // update template
+      if (selConcept.infoTemplate != null) {
+        $scope.infoTemplate = selConcept.infoTemplate;
+      } else {
+        $scope.infoTemplate = infoTemplate;
+      }
+      jQuery('#mui-template textarea').val($scope.infoTemplate);
+
+      // update marker selection
+      if (selConcept.markerImgPath != null) {
+        $scope.selectedMarkers = [selConcept.markerImgPath];
+        for (var i = 0; i < $scope.markerGridOptions.$gridScope.data.length; i++) {
+          // debugger;
+          if ($scope.markerGridOptions.$gridScope.data[i].img === selConcept.markerImgPath) {
+            $scope.markerGridOptions.selectItem(i, true);
+            break;
+          }
+        }
+      } else {
+        $scope.selectedMarkers = [];
+        $scope.markerGridOptions.$gridScope.toggleSelectAll(null, false);
+      }
+      
+      // update sponate mapping
+      if (selConcept.sponateMapping != null) {
+        $scope.sponateMapping = selConcept.sponateMapping;
+      } else {
+        $scope.sponateMapping = sponateMapping;
+      }
+      jQuery('#mui-sponate textarea').val($scope.sponateMapping);
+
+      // update query
+      if (selConcept.query != null) {
+        $scope.query = selConcept.query;
+      } else {
+        $scope.query = query;
+      }
+      jQuery('#mui-query textarea').val($scope.query);
+    });
 
     $scope.markerGridOptions = {
         data: 'data',
@@ -28,7 +78,7 @@ angular.module('mui2App')
         multiSelect: false,
         rowHeight: 42,
         keepLastSelected: false,
-        selectedItems: $scope.selectedMarkers,
+        // selectedItems: $scope.selectedMarkers,
         columnDefs: [{cellTemplate: $scope.template, field: 'img', displayName: 'marker'}],
 
         // TODO: adapt
@@ -39,16 +89,18 @@ angular.module('mui2App')
            */
           if (!rowItem.selected) {
             $scope.selectedMarkers.pop(rowItem.entity);
+          } else {
+            $scope.selectedMarkers = [rowItem.entity];
           }
         }
       };
 
     /** function for live displaying variables used in the SPARQL query */
-    $scope.queryVars = function(query) {
+    $scope.queryVars = function() {
       var regex = /(\?)([a-zA-Z][a-zA-Z_0-9_-]*)/g;
       var matches = [];
       var match;
-      while (match = regex.exec(query)) {
+      while (match = regex.exec($scope.query)) {
         var res = match[2];
         if (matches.indexOf(res) === -1) {
           matches.push(res);
@@ -71,8 +123,8 @@ angular.module('mui2App')
       $scope.query = query;
     };
     $scope.uiSettingsComplete = function() {
-      //console.log($scope.query.blank());
-      if ($scope.selectedConcepts.length === 1 && $scope.selectedMarkers.length === 1 && !$scope.query.blank()) {
+      if ($scope.selectedConcepts.length === 1
+          && $scope.selectedMarkers.length === 1 && !$scope.query.blank()) {
         return true;
       } else {
         return false;
@@ -81,11 +133,11 @@ angular.module('mui2App')
 
     $scope.saveUiSettings = function() {
       var concept = $scope.selectedConcepts[0];
-      concept.markerImgPath = $scope.selectedMarkers[0].img;
-      concept.sponateMapping = $scope.sponateMapping;
-      concept.infoTemplate = $scope.infoTemplate;
-      concept.query = $scope.query;
-      concept.showOnMap();
+      concept.update(
+          $scope.selectedMarkers[0].img,
+          $scope.query,
+          $scope.sponateMapping,
+          $scope.infoTemplate);
     };
 
     $scope.updateMappingStatus = function(mapping) {

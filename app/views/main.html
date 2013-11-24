@@ -39,6 +39,8 @@
           ng-click="toggleInitBoxDraw()">set initial map section</button>
       <button class="btn map-sec-btn" ng-class="{'btn-success': maxBtn.active}"
           ng-click="toggleMaxBoxDraw()">set maximal map section</button>
+      <button disabled ng-show="!sectionsChosen()" class="btn map-sec-btn">update map</button>
+      <button ng-show="sectionsChosen()" class="btn map-sec-btn" ng-click="updateMap()">update map</button>
       <div id="map" class="olMap"></div>
     </div>
   </div>

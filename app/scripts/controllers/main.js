@@ -22,48 +22,6 @@ angular.module('mui2App')
       $scope.$broadcast('mui-facets-deselect-down');
     });
 
-    /*
-     * promise functions
-     */
-    var showResultsOnMap = function(queryResults) {
-      // general setup of markers parameters
-      var size = new OpenLayers.Size(40,40);
-      var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
-      var popupSize = new OpenLayers.Size(1000,1000);
-      var layerName = 'mui-markers-' + $scope.selectedConcepts[0].id;
-      var markerLayers = map.getLayersByName('mui-markers');
-      for (var i = 0; i < markerLayers.length; i++) {
-        var layer = markerLayers[i];
-        map.removeLayer(layer);
-      }
-      var markers = new OpenLayers.Layer.Markers(layerName);
-      map.addLayer(markers);
-      //map.setLayerIndex(markers, 99);
-
-      for (var i = 0; i < queryResults.length; i++) {
-        var res = queryResults[i];
-        var long = res.long;
-        var lat = res.lat;
-        var longLat = new OpenLayers.LonLat(long, lat).transform(
-            new OpenLayers.Projection('EPSG:4326'), new OpenLayers.Projection('EPSG:900913'));
-        
-        var feature = new OpenLayers.Feature(markers, longLat);
-
-        feature.closeBox = true;
-        feature.popupClass = OpenLayers.Class(OpenLayers.Popup.FramedCloud, {
-            'autoSize': true,
-            'maxSize': popupSize
-          });
-
-        feature.data.overflow = 'auto';
-        feature.data.popupContentHTML = strTemplateParser.resolve(
-            $scope.selectedConcepts[0].infoTemplate, res);
-        feature.data.icon = new OpenLayers.Icon($scope.selectedConcepts[0].markerImgPath, size, offset);
-        var marker = feature.createMarker();
-        marker.events.register('mousedown', feature, markerClick);
-        markers.addMarker(marker);
-      }
-    };
 
     /**
      * Facet class
@@ -110,33 +68,87 @@ angular.module('mui2App')
         this.markerImgPath = null;
         this.sponateMapping = null;
         this.infoTemplate = null;
+        this.query = null;
       };
     Concept.prototype = {
       init : function() {
         this.name = 'Concept ' + muiConceptIdCounter;
         this.id = 'concept' + muiConceptIdCounter++;
       },
-      showOnMap : function() {
-        var name = $scope.selectedConcepts[0].id;
+      update : function(markerImgPath, query, sponateMapping, infoTemplate) {
+        this.markerImgPath = markerImgPath;
+        this.infoTemplate = infoTemplate;
 
-        // this is a hack used to reset the sponate service to be able to
-        // re-define an existing mapping
-        if (sponateService[name] !== undefined) {
-          delete sponateService[name];
+        // if anything concerning the sponate mapping changed, the sponateService
+        // has to be updated:
+        if ((this.query !== null && this.query !== query)
+              || (this.sponateMapping !== null && this.sponateMapping !== sponateMapping)) {
+          delete sponateService[this.id];
           var service = sponateService.service;
           var prefixes = sponateService.context.getPrefixMap().getJson();
-
           sponateService.initialize(service, prefixes);
         }
-        sponateService.addMap({
-          'name' : name,
-          // TODO: use eval instead of JSON.parse
-          'template' : [ JSON.parse($scope.selectedConcepts[0].sponateMapping) ],
-          'from' : $scope.selectedConcepts[0].query
-        });
 
-        var res = sponateService[name].find().asList();
-        res.done(showResultsOnMap);
+        this.sponateMapping = sponateMapping;
+        sponateService.addMap({
+            'name' : this.id,
+            // TODO: use eval instead of JSON.parse
+            'template' : [ JSON.parse(sponateMapping) ],
+            'from' : query
+          });
+        this.infoTemplate = infoTemplate;
+        console.log('Concept ' + this.name + ' updated');
+      },
+
+      showOnMap : function() {
+        console.log('showOnMap called for ' + this.name);
+        if (this.sponateMapping === null) {
+          console.log('[WARN] concept ' + this.name + ' has no saved sponate mapping. Skipping...');
+        } else {
+          var res = sponateService[this.id].find().asList();
+          var concept = this;
+
+          // show results on map
+          res.done(function(queryResults) {
+            // general setup of markers parameters
+            var size = new OpenLayers.Size(40,40);
+            var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
+            var popupSize = new OpenLayers.Size(1000,1000);
+            var layerName = 'mui-markers-' + concept.id;
+            var markerLayers = map.getLayersByName('mui-markers');
+            for (var i = 0; i < markerLayers.length; i++) {
+              var layer = markerLayers[i];
+              map.removeLayer(layer);
+            }
+            var markers = new OpenLayers.Layer.Markers(layerName);
+            map.addLayer(markers);
+            //map.setLayerIndex(markers, 99);
+
+            for (var i = 0; i < queryResults.length; i++) {
+              var res = queryResults[i];
+              var long = res.long;
+              var lat = res.lat;
+              var longLat = new OpenLayers.LonLat(long, lat).transform(
+                  new OpenLayers.Projection('EPSG:4326'), new OpenLayers.Projection('EPSG:900913'));
+              
+              var feature = new OpenLayers.Feature(markers, longLat);
+
+              feature.closeBox = true;
+              feature.popupClass = OpenLayers.Class(OpenLayers.Popup.FramedCloud, {
+                  'autoSize': true,
+                  'maxSize': popupSize
+                });
+
+              feature.data.overflow = 'auto';
+              feature.data.popupContentHTML = strTemplateParser.resolve(
+                  concept.infoTemplate, res);
+              feature.data.icon = new OpenLayers.Icon(concept.markerImgPath, size, offset);
+              var marker = feature.createMarker();
+              marker.events.register('mousedown', feature, markerClick);
+              markers.addMarker(marker);
+            }
+          });
+        }
       }
     };
 
@@ -207,6 +219,7 @@ angular.module('mui2App')
            */
           if (rowItem.selected) {
             // rowItem.entity.getFacets();
+            $scope.$broadcast('mui-concept-selection-changed');
           }
         }
       };

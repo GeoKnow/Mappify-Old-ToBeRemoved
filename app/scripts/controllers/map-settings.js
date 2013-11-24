@@ -6,6 +6,13 @@ angular.module('mui2App')
     init();
     
     // -- settings --
+    $scope.sectionsChosen = function() {
+      if ($scope.initBtn.coords !== null && $scope.maxBtn.coords !== null) {
+        return true;
+      } else {
+        return false;
+      }
+    }
     map.setCenter(
       //  8.85, 53.08  (10.3) --> Bremen
       // 12.35, 51.35  (10)   --> Leipzig
@@ -103,6 +110,12 @@ angular.module('mui2App')
       }
         
     };
+
+    $scope.updateMap = function() {
+      for (var i = 0; i < $scope.concepts.length; i++) {
+        $scope.concepts[i].showOnMap();
+      }
+    }
 
     // -- debug --
     $scope.logPositions = function() {
