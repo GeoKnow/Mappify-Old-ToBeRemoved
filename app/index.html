@@ -11,19 +11,19 @@
     <meta name="viewport" content="width=device-width">
     <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
 
-        <!-- build:css(.tmp) styles/main.css -->
-        <link rel="stylesheet" href="styles/bootstrap.css">
-        <link rel="stylesheet" href="styles/main.css">
-        <!-- endbuild -->
+    <!-- build:css(.tmp) styles/main.css -->
+    <link rel="stylesheet" href="styles/bootstrap.css">
+    <link rel="stylesheet" href="styles/main.css">
 
-        <!-- manual -->
-        <link rel="stylesheet" href="bower_components/angular-grid/ng-grid.css">
-        <link rel="stylesheet" href="styles/concept-constraints.css">
-        <link rel="stylesheet" href="styles/ui-settings.css">
-        <link rel="stylesheet" href="styles/map-settings.css">
-        <link rel="stylesheet" href="styles/facet-tree.css">
-        <link rel="stylesheet" type="text/css" href="bower_components/openlayers/theme/default/style.css">
-        <link rel="stylesheet" href="bower_components/jquery-ui/themes/smoothness/jquery-ui.css">
+    <link rel="stylesheet" href="bower_components/angular-grid/ng-grid.css">
+    <link rel="stylesheet" href="styles/concept-constraints.css">
+    <link rel="stylesheet" href="styles/ui-settings.css">
+    <link rel="stylesheet" href="styles/map-settings.css">
+    <link rel="stylesheet" href="styles/facet-tree.css">
+    <link rel="stylesheet" type="text/css" href="bower_components/openlayers/theme/default/style.css">
+    <link rel="stylesheet" href="bower_components/jquery-ui/themes/smoothness/jquery-ui.css">
+    <!-- endbuild -->
+    <!-- build:js scripts/plugins.js -->
     <script type="text/javascript">
         var map; //, layer;
         var currentPopup; // added while trying to make the popup work -- maybe wrong here
@@ -33,7 +33,7 @@
             map.addLayer(layer);
         }
     </script>
-        <!-- endbuild -->
+    <!-- endbuild -->
 </head>
   <body ng-app="mui2App">
     <!--[if lt IE 7]>
@@ -51,54 +51,48 @@
     <script src="bower_components/jquery/jquery.js"></script>
     <script src="bower_components/angular/angular.js"></script>
 
-        <!-- build:js scripts/plugins.js -->
-        <script src="bower_components/bootstrap-sass/js/bootstrap-affix.js"></script>
-        <script src="bower_components/bootstrap-sass/js/bootstrap-alert.js"></script>
-        <script src="bower_components/bootstrap-sass/js/bootstrap-dropdown.js"></script>
-        <script src="bower_components/bootstrap-sass/js/bootstrap-tooltip.js"></script>
-        <script src="bower_components/bootstrap-sass/js/bootstrap-modal.js"></script>
-        <script src="bower_components/bootstrap-sass/js/bootstrap-transition.js"></script>
-        <script src="bower_components/bootstrap-sass/js/bootstrap-button.js"></script>
-        <script src="bower_components/bootstrap-sass/js/bootstrap-popover.js"></script>
-        <script src="bower_components/bootstrap-sass/js/bootstrap-typeahead.js"></script>
-        <script src="bower_components/bootstrap-sass/js/bootstrap-carousel.js"></script>
-        <script src="bower_components/bootstrap-sass/js/bootstrap-scrollspy.js"></script>
-        <script src="bower_components/bootstrap-sass/js/bootstrap-collapse.js"></script>
-        <script src="bower_components/bootstrap-sass/js/bootstrap-tab.js"></script>
-        <!-- endbuild -->
+    <!-- build:js scripts/plugins.js -->
+    <script src="bower_components/bootstrap-sass/js/bootstrap-affix.js"></script>
+    <script src="bower_components/bootstrap-sass/js/bootstrap-alert.js"></script>
+    <script src="bower_components/bootstrap-sass/js/bootstrap-dropdown.js"></script>
+    <script src="bower_components/bootstrap-sass/js/bootstrap-tooltip.js"></script>
+    <script src="bower_components/bootstrap-sass/js/bootstrap-modal.js"></script>
+    <script src="bower_components/bootstrap-sass/js/bootstrap-transition.js"></script>
+    <script src="bower_components/bootstrap-sass/js/bootstrap-button.js"></script>
+    <script src="bower_components/bootstrap-sass/js/bootstrap-popover.js"></script>
+    <script src="bower_components/bootstrap-sass/js/bootstrap-typeahead.js"></script>
+    <script src="bower_components/bootstrap-sass/js/bootstrap-carousel.js"></script>
+    <script src="bower_components/bootstrap-sass/js/bootstrap-scrollspy.js"></script>
+    <script src="bower_components/bootstrap-sass/js/bootstrap-collapse.js"></script>
+    <script src="bower_components/bootstrap-sass/js/bootstrap-tab.js"></script>
+    <!-- endbuild -->
 
-        <!-- build:js scripts/modules.js -->
-        <script src="bower_components/angular-resource/angular-resource.js"></script>
-        <script src="bower_components/angular-cookies/angular-cookies.js"></script>
-        <script src="bower_components/angular-sanitize/angular-sanitize.js"></script>
+    <!-- build:js scripts/modules.js -->
+    <script src="bower_components/angular-resource/angular-resource.js"></script>
+    <script src="bower_components/angular-cookies/angular-cookies.js"></script>
+    <script src="bower_components/angular-sanitize/angular-sanitize.js"></script>
+    <script src="bower_components/angular-bootstrap/ui-bootstrap.js"></script>
+    <script src="bower_components/angular-grid/ng-grid-2.0.7.debug.js"></script>
+    <script src="bower_components/jquery-ui/ui/jquery-ui.js"></script>
+    <script src="bower_components/angular-ui-slider/src/slider.js"></script>
+    <script src="bower_components/openlayers/lib/OpenLayers.js"></script>
+    <script src="bower_components/underscore/underscore.js"></script>
+    <script src="bower_components/underscore.string/lib/underscore.string.js"></script>
+    <script>_.mixin(_.str.exports());</script>
+    <script src="bower_components/prototypejs/prototype.js"></script>
+    <script src="bower_components/jassa/jassa.js"></script>
+    <!-- endbuild -->
 
-        <!-- endbuild -->
-
-        <!-- manual includes -->
-        <script src="bower_components/angular-bootstrap/ui-bootstrap.js"></script>
-        <script src="bower_components/angular-grid/ng-grid-2.0.7.debug.js"></script>
-        <script src="bower_components/jquery-ui/ui/jquery-ui.js"></script>
-        <script src="bower_components/angular-ui-slider/src/slider.js"></script>
-        <script src="bower_components/openlayers/lib/OpenLayers.js"></script>
-        <script src="bower_components/underscore/underscore.js"></script>
-        <script src="bower_components/underscore.string/lib/underscore.string.js"></script>
-        <script>_.mixin(_.str.exports());</script>
-        <script src="bower_components/prototypejs/prototype.js"></script>
-        <script src="bower_components/jassa/jassa.js"></script>
-        <!-- endbuild -->
-
-        <!-- build:js({.tmp,app}) scripts/scripts.js -->
-        <script src="scripts/app.js"></script>
-        <script src="scripts/controllers/main.js"></script>
-        <!-- endbuild -->
-
-        <!-- ...own controllers -->
-        <script src="scripts/controllers/concept-constraints.js"></script>
-        <script src="scripts/controllers/ui-settings.js"></script>
-        <script src="scripts/controllers/map-settings.js"></script>
-        <script src="scripts/controllers/facet-tree.js"></script>
-        <script src="scripts/services/sparql_service.js"></script>
-        <script src="scripts/services/sponate_service.js"></script>
-        <script src="scripts/services/str_template_parser.js"></script>
+    <!-- build:js({.tmp,app}) scripts/scripts.js -->
+    <script src="scripts/app.js"></script>
+    <script src="scripts/controllers/main.js"></script>
+    <script src="scripts/controllers/concept-constraints.js"></script>
+    <script src="scripts/controllers/ui-settings.js"></script>
+    <script src="scripts/controllers/map-settings.js"></script>
+    <script src="scripts/controllers/facet-tree.js"></script>
+    <script src="scripts/services/sparql_service.js"></script>
+    <script src="scripts/services/sponate_service.js"></script>
+    <script src="scripts/services/str_template_parser.js"></script>
+    <!-- endbuild -->
 </body>
 </html>
