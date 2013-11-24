@@ -6,10 +6,20 @@ angular.module('mui2App')
     $scope.selectedFacets = [];
     $scope.activeConstrTab = 'value';
     $scope.disabledTabs = [];
-    $scope.facetValues = [];
+    $scope.facetValues = [
+      {'value' : 'dbo:Castle'}, {'value' : 'dbo:Airport'},
+      {'value' : 'dbo:Place'}, {'value': 'dbo:ArchitecturalStructure'},
+      {'value': 765.0}, {'value': 1110.39}, {'value': 1229.0},
+      {'value': 1370.38}, {'value': 1395.98}, {'value': 1554.48},
+      {'value': 1616.66}, {'value': 1782.0}, {'value': 1793.75},
+      {'value': 1979.98}, {'value': 2048.56}, {'value': 2293.92},
+      {'value': 2334.77}, {'value': 2555.75}, {'value': 2664.87},
+      {'value': 2987.0}, {'value': 2995.57}, {'value': 3356.76},
+      {'value': 3566.16}, {'value': 4604.0}, {'value': 7093.0},
+      {'value': 9752.0}, {'value': 10700.0}]
     $scope.selectedFacetValues = [];
-    $scope.minMax = [0, 0];
-    $scope.initMinMax = [0, 1];
+    $scope.minMax = [765.0, 10700.0];
+    $scope.initMinMax = [765.0, 10700.0];
 
     /** facets table settings */
     $scope.facetGridOptions = {

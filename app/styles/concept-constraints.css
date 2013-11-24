@@ -29,10 +29,22 @@ div.mui-concept-constraints div.gridStyle {
 }
 
 div.mui-concept-constr-slider {
-    width: 15em;
+    width: 13em;
     padding: 20px;
 }
 
 div.mui-concept-constr-slider input {
   margin-top: 10px;
+}
+
+#mui-main div#mui-constraints {
+    width: 16em;
+    float: left;
+}
+
+#mui-main div#mui-concept-settings {
+    width: 16em;
+    height: 10.5em;
+    float: left;
+    overflow: auto;
 }

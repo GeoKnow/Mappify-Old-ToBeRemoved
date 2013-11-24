@@ -31,6 +31,7 @@ angular.module('mui2App')
       this.childFacets = [];
       this.selected = false;
       this.collapsed = true;
+      this.values = [];
     };
     Facet.prototype = {
       toggleSelected : function() {
@@ -55,6 +56,14 @@ angular.module('mui2App')
           this.addChildFacet(childFacet);
         }
       },
+
+      getValues : function() {
+        return this.values;
+      },
+
+      setValues : function(values) {
+        this.values = values;
+      }
     };
 
 
@@ -189,9 +198,11 @@ angular.module('mui2App')
     var dbpLatitude = new Facet('dbp:latitude');
     // create dbpprop:longitude
     var dbpLongitude = new Facet('dbp:longitude');
+    // create dbo:runwayLength
+    var dboRunwayLength = new Facet('dbo:runwayLength');
     // add all facets to root facet rdf:type
     var rdfType = new Facet('rdf:type');
-    rdfType.addChildFacets([dbpName, dctermsSubject, rdfsLabel, dboLocation, dbpLatitude, dbpLongitude]);
+    rdfType.addChildFacets([dbpName, dctermsSubject, rdfsLabel, dboLocation, dbpLatitude, dbpLongitude, dboRunwayLength]);
     $scope.facets.push(rdfType);
 
     /*
@@ -224,6 +235,15 @@ angular.module('mui2App')
         }
       };
 
+    /** concept settings table settings */
+    $scope.constraints = [{'text': 'rdf:type = dbo:Castle'}];
+    $scope.conceptSettingsGridOptions = {
+        data : 'constraints',
+        enableCellSelection : true,
+        enableRowSelection : true,
+        multiSelect : false,
+        columnDefs : [{field : 'text', displayName : 'constraints', enableCellEdit : true}]
+    };
     /*
      * scope functions
      */
