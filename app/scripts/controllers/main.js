@@ -98,14 +98,17 @@ angular.module('mui2App')
           sponateService.initialize(service, prefixes);
         }
 
+        this.infoTemplate = infoTemplate;
+        this.query = query;
         this.sponateMapping = sponateMapping;
+        // TODO: add error handling!!!
         sponateService.addMap({
             'name' : this.id,
             // TODO: use eval instead of JSON.parse
             'template' : [ JSON.parse(sponateMapping) ],
             'from' : query
           });
-        this.infoTemplate = infoTemplate;
+
         console.log('Concept ' + this.name + ' updated');
       },
 

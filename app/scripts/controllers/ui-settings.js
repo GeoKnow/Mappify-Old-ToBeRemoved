@@ -28,10 +28,11 @@ angular.module('mui2App')
     $scope.infoTemplate = infoTemplate;
 
     $scope.$on('mui-concept-selection-changed', function() {
+      console.log('mui-concept-selection-changed event caught');
       var selConcept = $scope.selectedConcepts[0];
 
       // update template
-      if (selConcept.infoTemplate != null) {
+      if (selConcept.infoTemplate !== null) {
         $scope.infoTemplate = selConcept.infoTemplate;
       } else {
         $scope.infoTemplate = infoTemplate;
@@ -42,7 +43,6 @@ angular.module('mui2App')
       if (selConcept.markerImgPath != null) {
         $scope.selectedMarkers = [selConcept.markerImgPath];
         for (var i = 0; i < $scope.markerGridOptions.$gridScope.data.length; i++) {
-          // debugger;
           if ($scope.markerGridOptions.$gridScope.data[i].img === selConcept.markerImgPath) {
             $scope.markerGridOptions.selectItem(i, true);
             break;
