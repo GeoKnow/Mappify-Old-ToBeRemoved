@@ -11,29 +11,30 @@
  * 
  */
 var Jassa = {
+	vocab: {
+		util: {},
+		xsd: {},
+		rdf: {},
+		rdfs: {},
+		owl: {},
+		wgs84: {}
+	},
+
 	rdf: {
-		vocabs: {
-			utils: {},
-			xsd: {},
-			rdf: {},
-			rdfs: {},
-			owl: {},
-			wgs84: {}
-		}		
 	},
 		
 	sparql: {},
 
+	service: {},
+	
 	i18n: {},
 
 	sponate: {},
 	
-	facets: {},
+	facete: {},
 	
-	vocabs: {},
-	
-	utils: {
-		collections: {}
+	util: {
+		//collection: {}
 	}
 };
 
@@ -49,12 +50,131 @@ module["exports"] = Jassa;
 
 (function() {
 	
-	var ns = Jassa.utils.collections;
+	var ns = Jassa.util;
+	
+	ns.Iterator = Class.create({
+		next: function() {
+			throw "Not overridden";
+		},
+		
+		hasNext: function() {
+			throw "Not overridden";			
+		}
+	});
+	
+	
+	ns.Entry = Class.create({
+		initialize: function(key, value) {
+			this.key = key;
+			this.value = value;
+		},
+		
+		getKey: function() {
+			return this.key;
+		},
+		
+		getValue: function() {
+			return this.value;
+		},
+		
+		toString: function() {
+			return this.key + "->" + this.value;
+		}
+	});
+	
+	/**
+	 * Utility class to create an iterator over an array.
+	 * 
+	 */
+	ns.IteratorArray = Class.create(ns.Iterator, {
+		initialize: function(array, offset) {
+			this.array = array;
+			this.offset = offset ? offset : 0;
+		},
+	
+		hasNext: function() {
+			var result = this.offset < this.array.length;
+			return result;
+		},
+		
+		next: function() {
+			var hasNext = this.hasNext();
+			
+			var result;
+			if(hasNext) {			
+				result = this.array[this.offset];
+				
+				++this.offset;
+			}
+			else {
+				result = null;
+			}
+			
+			return result;
+		}		
+	});
+	
+	
+	/**
+	 * A map that just wraps a json object
+	 * Just there to provide a unified map interface
+	 */
+	ns.ObjectMap = Class.create({
+		initialize: function(data) {
+			this.data = data ? data : {};
+		},
+		
+		get: function(key) {
+			return this.data[key];
+		},
+		
+		put: function(key, val) {
+			this.data[key] = val;
+		},
+		
+		remove: function(key) {
+			delete this.data[key];
+		},
+		
+		entries: function() {
+			throw "Not implemented";
+		},
+		
+		toString: function() {
+			return JSON.stringify(this.data); 
+		}
+	});
+	
+	ns.defaultEquals = function(a, b) {
+		var result;
+		if(a && a.equals) {
+			result = a.equals(b);
+		}
+		else if(b && b.equals) {
+			result = b.equals(a);
+		}
+		else {
+			result = _.isEqual(a, b);
+		}
+		
+		return result;
+	};
+	
+	ns.defaultHashCode = function(a) {
+		if(a && a.hashCode) {
+			result = a.hashCode();
+		}
+		else {
+			result = "" + a;
+		}
+		
+		return result;
+	}
 	
 	ns.HashMap = Class.create({
 		initialize: function(fnEquals, fnHash) {
-			this.fnEquals = fnEquals ? fnEquals : _.isEqual;
-			this.fnHash = fnHash ? fnHash : (function(x) { return '' + x; });
+			this.fnEquals = ns.defaultEquals;
+			this.fnHash = ns.defaultHashCode;
 			
 			this.hashToBucket = {};
 		},
@@ -147,7 +267,7 @@ module["exports"] = Jassa;
 		entries: function() {
 			var result = [];
 			
-			_.each(this.hashToBucket, function(bucket) {
+			_(this.hashToBucket).each(function(bucket) {
 				result.push.apply(result, bucket);
 			});
 			
@@ -205,18 +325,56 @@ module["exports"] = Jassa;
 		}
 	});
 
+
 	ns.HashSet = Class.create({
 		initialize: function(fnEquals, fnHash) {
+			this.map = new ns.HashMap(fnEquals, fnHash);
+		},
+		
+		add: function(item) {
+			this.map.put(item, true);
+		},
+		
+		contains: function(item) {
+			var result = this.map.containsKey(item);
+			return result;
+		},
+		
+		remove: function(item) {
+			this.map.remove(item);
+		},
+		
+		entries: function() {
+			var result = _(this.map.entries()).map(function(entry) {
+				//return entry.getKey();
+				return entry.key;
+			});
 			
+			return result;
+		},
+		
+		toString: function() {
+			var entries = this.entries();
+			var result = "{" + entries.join(", ") + "}";
+			return result;
 		}
-		
-		
 	});
+	
+	ns.CollectionUtils = {
+		toggleItem: function(collection, item) {
+			if(collection.contains(item)) {
+				collection.remove(item);
+			}
+			else {
+				collection.add(item);
+			}
+		}	
+	};
 	
 })();
 (function() {
 	
-	var ns = Jassa.utils.collections;
+	var ns = Jassa.util;
 	
 	ns.TreeUtils = {
 		
@@ -242,7 +400,6 @@ module["exports"] = Jassa;
 (function() {
 	
 	var ns = Jassa.rdf;
-	var rdf = Jassa.rdf;
 	
 
 	// Note: the shortcuts we used actually are quite ok for JavaScript
@@ -313,16 +470,26 @@ module["exports"] = Jassa;
 			else if(this.isLiteral()) {
 				if(that.isLiteral()) {
 					
-					var isSameLex = this.getLiteralLexicalForm() == that.getLiteralLexicalForm();
-					var isSameType = this.getLiteralDatatypeUri() == that.getLiteralDatatypeUri();
-					var isSameLang = this.getLiteralLanguage() == that.getLiteralLanguage();
+					var isSameLex = this.getLiteralLexicalForm() === that.getLiteralLexicalForm();
+					var isSameType = this.getLiteralDatatypeUri() === that.getLiteralDatatypeUri();
+					var isSameLang = this.getLiteralLanguage() === that.getLiteralLanguage();
 					
 					result = isSameLex && isSameType && isSameLang;
 				}
 			}
 			else if(this.isUri()) {
 				if(that.isUri()) {
-					result = this.getUri() == that.getUri();
+					result = this.getUri() === that.getUri();
+				}
+			}
+			else if(this.isVariable()) {
+				if(that.isVariable()) {
+					result = this.getName() === that.getName();
+				}
+			}
+			else if(this.isBlank()) {
+				if(that.isBlank()) {
+					result = this.getBlankNodeLabel() === that.getBlankNodeLabel(); 
 				}
 			}
 			//else if(this.)
@@ -362,8 +529,8 @@ module["exports"] = Jassa;
 	
 	ns.Node_Blank = Class.create(ns.Node_Concrete, {
 		// Note: id is expected to be an instance of AnonId
-		initialize: function(id) {
-			this.id = id;
+		initialize: function(anonId) {
+			this.anonId = anonId;
 		},
 		
 		isBlank: function() {
@@ -371,7 +538,11 @@ module["exports"] = Jassa;
 		},
 		
 		getBlankNodeId: function() {
-			return id;
+			return anonId;
+		},
+		
+		toString: function() {
+			return "_:" + this.anonId;
 		}
 	});
 	
@@ -523,6 +694,10 @@ module["exports"] = Jassa;
 
 		getLabelString: function() {
 			return label;
+		},
+		
+		toString: function() {
+			return this.label;
 		}
 	});
 	
@@ -623,6 +798,10 @@ module["exports"] = Jassa;
 	
 	
 	ns.NodeFactory = {
+		createAnon: function(anonId) {
+			return new ns.Node_Blank(anonId);
+		},
+			
 		createUri: function(uri) {
 			return new ns.Node_Uri(uri);
 		},
@@ -693,7 +872,8 @@ module["exports"] = Jassa;
 			var result;
 			switch(talisJson.type) {
 				case 'bnode':
-					throw 'Not implemented yet';
+					var anonId = new ns.AnonIdStr(talisJson.value);
+					result = new ns.NodeFactory.createAnon(anonId);
 					break;
 				case 'uri': 
 					result = ns.NodeFactory.createUri(talisJson.value);	
@@ -721,6 +901,70 @@ module["exports"] = Jassa;
 		v: ns.NodeFactory.createVar
 	});
 
+	
+	
+	ns.getSubstitute = function(node, fnNodeMap) {
+		var result = fnNodeMap(node);
+		if(!result) {
+			result = node;
+		}
+		
+		return result;
+	};
+	
+	ns.Triple = Class.create({
+		initialize: function(s, p, o) {
+			this.s = s;
+			this.p = p;
+			this.o = o;
+		},
+	
+		toString: function() {
+			return this.s + " " + this.p + " " + this.o;
+		},
+		
+		copySubstitute: function(fnNodeMap) {
+			var result = new ns.Triple(
+				ns.getSubstitute(this.s, fnNodeMap),
+				ns.getSubstitute(this.p, fnNodeMap),
+				ns.getSubstitute(this.o, fnNodeMap)
+			);
+			
+			return result;
+			//	this.s.copySubstitute(fnNodeMap), this.p.copySubstitute(fnNodeMap), this.o.copySubstitute(fnNodeMap));
+		},
+	
+		getSubject: function() {
+			return this.s;
+		},
+
+		getProperty: function() {
+			return this.p;
+		},
+	
+		getObject: function() {
+			return this.o;
+		},
+	
+		getVarsMentioned: function() {
+			var result = [];
+			ns.Triple.pushVar(result, this.s);
+			ns.Triple.pushVar(result, this.p);
+			ns.Triple.pushVar(result, this.o);	
+			return result;
+		}
+	});
+	
+	
+	ns.Triple.pushVar = function(array, node) {
+		
+		if(node.isVariable()) {
+			_(array).union(node);
+		}
+		
+		return array;
+	};
+	
 	
 })();
 
@@ -903,7 +1147,7 @@ module["exports"] = Jassa;
 
 	var rdf = Jassa.rdf;
 
-	var ns = Jassa.rdf.vocabs.utils;
+	var ns = Jassa.vocab.util;
 
 	/**
 	 * Creates rdf.Node objects in the target namespace
@@ -928,26 +1172,27 @@ module["exports"] = Jassa;
 	
 })();	(function() {
 	
-	var utils = Jassa.rdf.vocabs.utils;
-	var ns = Jassa.rdf.vocabs.xsd;
-	
-	var p = 'http://www.w3.org/2001/XMLSchema#';
+	var util = Jassa.vocab.util;
+	var ns = Jassa.vocab.xsd;
+
+	var p = "http://www.w3.org/2001/XMLSchema#";
 
 	// String versions
 	ns.str = {
-		xboolean: p + 'boolean',
-		xint: p + 'int',
-		decimal: p + 'decimal',
-		xfloat: p + 'float',
-		xdouble: p + 'double',
-		xstring: p + 'string',
+		xboolean: p + "boolean",
+		xint: p + "int",
+		xinteger: p + "integer",
+		decimal: p + "decimal",
+		xfloat: p + "float",
+		xdouble: p + "double",
+		xstring: p + "string",
 	
-		date: p + 'date',
-	    dateTime: p + 'dateTime'		
+		date: p + "date",
+	    dateTime: p + "dateTime"		
 	};
 	
 	
-	utils.initNodes(ns);
+	util.initNodes(ns);
 
 //	// Node versions
 //	var str = ns.str;
@@ -972,7 +1217,7 @@ module["exports"] = Jassa;
 
 	// This file requires the xsd datatypes, whereas xsd depends on rdf-core
 	
-	var xsd = Jassa.rdf.vocabs.xsd;
+	var xsd = Jassa.vocab.xsd;
 	var s = xsd.str;
 	var ns = Jassa.rdf;
 	
@@ -981,7 +1226,6 @@ module["exports"] = Jassa;
 		xinteger: new ns.DatatypeLabelInteger(),
 		xfloat: new ns.DatatypeLabelFloat(),
 		xstring: new ns.DatatypeLabelString(),
-		xdouble: new ns.DatatypeLabelFloat(), // PW
 		decimal: new ns.DatatypeLabelInteger() // TODO Handle Decimal properly
 	};
 	
@@ -993,9 +1237,10 @@ module["exports"] = Jassa;
 	};
 	
 	ns.registerRdfDatype(xsd.str.xint, ns.DatatypeLabels.xinteger);
+	ns.registerRdfDatype(xsd.str.xinteger, ns.DatatypeLabels.xinteger);
 	ns.registerRdfDatype(xsd.str.xstring, ns.DatatypeLabels.xstring);
 	ns.registerRdfDatype(xsd.str.xfloat, ns.DatatypeLabels.xfloat);
-	ns.registerRdfDatype(xsd.str.xdouble, ns.DatatypeLabels.xfloat); // PW
+
 	ns.registerRdfDatype(xsd.str.decimal, ns.DatatypeLabels.xinteger);
 	
 	/**
@@ -1023,22 +1268,23 @@ module["exports"] = Jassa;
 	
 })();(function() {
 
-	var utils = Jassa.rdf.vocabs.utils;
-	var ns = Jassa.rdf.vocabs.rdf;
+	var util = Jassa.vocab.util;
+	var ns = Jassa.vocab.rdf;
 	
-	var p = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+	var p = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 	
 	ns.str = {
-		type: p + 'type'
+		type: p + "type",
+		Property: p + "Property"
 	};
 	
-	utils.initNodes(ns);
+	util.initNodes(ns);
 
 })();	
 (function() {
 
-	var utils = Jassa.rdf.vocabs.utils;
-	var ns = Jassa.rdf.vocabs.rdfs;
+	var util = Jassa.vocab.util;
+	var ns = Jassa.vocab.rdfs;
 	
 	var p = 'http://www.w3.org/2000/01/rdf-schema#';
 	
@@ -1047,13 +1293,13 @@ module["exports"] = Jassa;
 		subClassOf: p + 'subClassOf'
 	};
 	
-	utils.initNodes(ns);
+	util.initNodes(ns);
 
 })();	
 (function() {
 	
-	var utils = Jassa.rdf.vocabs.utils;
-	var ns = Jassa.rdf.vocabs.owl;
+	var util = Jassa.vocab.util;
+	var ns = Jassa.vocab.owl;
 	
 	var p = 'http://www.w3.org/2002/07/owl#';
 	
@@ -1061,13 +1307,13 @@ module["exports"] = Jassa;
 		'Class': p + 'Class'
 	};
 	
-	utils.initNodes(ns);
+	util.initNodes(ns);
 	
 })();	
 (function() {
 	
-	var utils = Jassa.rdf.vocabs.utils;
-	var ns = Jassa.rdf.vocabs.wgs84;
+	var util = Jassa.vocab.util;
+	var ns = Jassa.vocab.wgs84;
 	
 	var p = 'http://www.w3.org/2003/01/geo/wgs84_pos#';
 
@@ -1077,7 +1323,7 @@ module["exports"] = Jassa;
 		lat: p + "lat",
 	};
 		
-	utils.initNodes(ns);
+	util.initNodes(ns);
 	
 })();(function() {
 
@@ -1092,7 +1338,7 @@ module["exports"] = Jassa;
 })();(function() {
 
 	var rdf = Jassa.rdf;
-	var xsd = Jassa.rdf.vocabs.xsd;
+	var xsd = Jassa.vocab.xsd;
 
 	
 	var ns = Jassa.sparql;
@@ -1349,7 +1595,7 @@ module["exports"] = Jassa;
 		},
 	
 		copySubstitute: function(fnNodeMap) {		
-			var newElements = _.map(this.nodes, function(x) { return x.copySubstitute(fnNodeMap); });
+			var newElements = _.map(this.nodes, function(x) { return rdf.getSubstitute(x, fnNodeMap); });
 			return new ns.E_In(this.variable.copySubstitute(fnNodeMap), newElements);
 		},
 	
@@ -1950,7 +2196,8 @@ module["exports"] = Jassa;
 		},
 		
 		toString: function() {
-			return 'NodeValue[' + this.node + ']';
+			return "" + this.node;
+			//return 'NodeValue[' + this.node + ']';
 		}
 	});
 	
@@ -2094,16 +2341,11 @@ module["exports"] = Jassa;
 (function() {
 
 	var rdf = Jassa.rdf;
-	var xsd = Jassa.rdf.vocabs.xsd;
+	var xsd = Jassa.vocab.xsd;
 
 	
 	var ns = Jassa.sparql;
 
-	/*
-	 * rdf.Node is the same as sparql.Node, but the former is strongly preferred. 
-	 * This alias for the Node object between the rdf and sparql namespace exists for legacy reasons.
-	 */
-	ns.Node = Jassa.rdf.Node;
 	
 	//var strings = Namespace("org.aksw.ssb.utils.strings");
 	//var strings = require('underscore.strings');
@@ -2400,55 +2642,7 @@ module["exports"] = Jassa;
 	
 	
 	
-	ns.Triple = function(s, p, o) {
-		this.s = s;
-		this.p = p;
-		this.o = o;
-	};
-	
-	ns.Triple.prototype.toString = function() {
-		//return this.s + " " + this.p + " " + this.o + " .";
-		return this.s + " " + this.p + " " + this.o;
-	};
-	
-	/*
-	ns.fnNodeMapWrapper = function(node, fnNodeMap) {
-		var sub = fnNodeMap(node);		 
-		var result = (sub == undefined || sub == null) ? node : sub;
-		return result;
-	};
-	*/
-	
-	ns.Triple.prototype.copySubstitute = function(fnNodeMap) {
-		return new ns.Triple(this.s.copySubstitute(fnNodeMap), this.p.copySubstitute(fnNodeMap), this.o.copySubstitute(fnNodeMap));
-	};
-	
-	ns.Triple.prototype.getSubject = function() {
-		return this.s;
-	};
 
-	ns.Triple.prototype.getProperty = function() {
-		return this.p;
-	};
-	
-	ns.Triple.prototype.getObject = function() {
-		return this.o;
-	};
-	
-	ns.Triple.prototype.getVarsMentioned = function() {
-		var result = [];
-		result = ns.Triple.pushVar(result, this.s);
-		result = ns.Triple.pushVar(result, this.p);
-		result = ns.Triple.pushVar(result, this.o);
-		
-		return result;
-	};
-	
-	
-	ns.Triple.pushVar = function(array, node) {
-		return (node.type != -1) ? array : _.union(array, node.value);
-	};
-	
 	
 	ns.BasicPattern = function(triples) {
 		this.triples = triples ? triples : [];
@@ -2795,9 +2989,10 @@ module["exports"] = Jassa;
 
 		getVarsMentioned: function() {
 			var result = [];
-			for(var i in this.triples) {
-				result = _.union(result, this.triples[i].getVarsMentioned());
-			}
+			_.each(this.triples, function(triple) {
+				result = _.union(result, triple.getVarsMentioned());				
+			});
+
 			return result;
 		},
 
@@ -2833,11 +3028,13 @@ module["exports"] = Jassa;
 		},
 	
 		getVarsMentioned: function() {
-			var result = [];
-			for(var i in this.elements) {
-				result = _.union(result, this.elements[i].getVarsMentioned());
-			}
+			var result = ns.PatternUtils.getVarsMentioned(this.elements);
 			return result;
+//			var result = [];
+//			for(var i in this.elements) {
+//				result = _.union(result, this.elements[i].getVarsMentioned());
+//			}
+//			return result;
 		},
 
 		toString: function() {
@@ -2852,55 +3049,16 @@ module["exports"] = Jassa;
 			if(processed.length === 1) {
 				return processed[0];
 			} else {
-				return new ns.ElementGroup(ns.flattenElements(processed));
+				return new ns.ElementGroup(ns.ElementUtils.flattenElements(processed));
 			}
 		}
 	};
 	
-	
-	
-	/**
-	 * Bottom up
-	 * - Merge ElementTripleBlocks
-	 * - Merge ElementGroups
-	 */
-	ns.flattenElements = function(elements) {
-		var result = [];
-		
-		var triples = [];
-		
-		var tmps = [];
-		_.each(elements, function(item) {
-			if(item instanceof ns.ElementGroup) {
-				tmps.push.apply(tmps, item.elements);
-			} else {
-				tmps.push(item);
-			}
-		});
-		
-		_.each(tmps, function(item) {
-			if(item instanceof ns.ElementTriplesBlock) {
-				triples.push.apply(triples, item.getTriples());
-			} else {
-				result.push(item);
-			}
-		});		
 
-		if(triples.length > 0) {			
-			var ts = ns.uniqTriples(triples);
-			
-			result.unshift(new ns.ElementTriplesBlock(ts));
-		}
-		
-		//console.log("INPUT ", elements);
-		//console.log("OUTPUT ", result);
-		
-		return result;
-	};
 	
 	ns.joinElements = function(separator, elements) {
 		var strs = _.map(elements, function(element) { return "" + element; });
-		var filtered = _.filter(strs, function(str){ return str.length != 0; });
+		var filtered = _.filter(strs, function(str) { return str.length != 0; });
 		
 		return filtered.join(separator);
 	};
@@ -3047,7 +3205,7 @@ module["exports"] = Jassa;
 			this.vars.push(v);
 			
 			if(expr) {
-				this.varToExpr[v.value] = expr;
+				this.varToExpr[v.getName()] = expr;
 			}
 		},
 		
@@ -3057,13 +3215,19 @@ module["exports"] = Jassa;
 		},
 		
 		entries: function() {
-			var result = [];
-			for(var i = 0; i < this.vars.length; ++i) {
-				var v = this.vars[i];
-				var expr = this.varToExpr[v.value];
-				
-				result.push({v:v, expr:expr});
-			}
+			var self = this;
+			var result = _(this.vars).map(function(v) {
+				var expr = self.varToExpr[v.getName()];
+
+				//return expr;
+				return {v: v, expr: expr};
+			});
+			
+//			for(var i = 0; i < this.vars.length; ++i) {
+//				var v = this.vars[i];
+//				
+//				result.push({v:v, expr:expr});
+//			}
 
 			return result;
 		},
@@ -3139,36 +3303,35 @@ module["exports"] = Jassa;
 	};
 	
 	
-	ns.Query = function() {
-		this.type = 0; // select, construct, ask, describe
-		
-		this.distinct = false;
-		this.reduced = false;
-		
-		this.isResultStar = false;
-		
-		this.projectVars = new ns.VarExprList();
-		//this.projectVars = []; // The list of variables to appear in the projection
-		//this.projectExprs = {}; // A map from variable to an expression
-		
-		//this.projection = {}; // Map from var to expr; map to null for using the var directly
-		
-		//this.order = []; // A list of expressions
-		
-		this.groupBy = []; 
-		this.orderBy = [];
-
-		
-		this.elements = [];
-		
-		this.constructTemplate = null;
-		
-		this.limit = null;
-		this.offset = null;		
-	};
+	ns.Query = Class.create({
+		initialize: function() {
+			this.type = 0; // select, construct, ask, describe
+			
+			this.distinct = false;
+			this.reduced = false;
+			
+			this.isResultStar = false;
+			
+			this.projectVars = new ns.VarExprList();
+			//this.projectVars = []; // The list of variables to appear in the projection
+			//this.projectExprs = {}; // A map from variable to an expression
+			
+			//this.projection = {}; // Map from var to expr; map to null for using the var directly
+			
+			//this.order = []; // A list of expressions
+			
+			this.groupBy = []; 
+			this.orderBy = [];
 	
+			
+			this.elements = [];
+			
+			this.constructTemplate = null;
+			
+			this.limit = null;
+			this.offset = null;		
+		},
 	
-	ns.Query.prototype = {
 		getElements: function() {
 			return this.elements;
 		},
@@ -3203,160 +3366,166 @@ module["exports"] = Jassa;
 				: "";
 				//console.log("Order: ", this.orderBy);
 			return result;
+		},
+		
+		clone: function() {
+			return this.copySubstitute(ns.fnIdentity);
+		},
+
+		flatten: function() {
+			var result = this.clone();
+
+			var tmp = _.map(result.elements, function(element) { return element.flatten(); });
+
+			var newElements = ns.ElementUtils.flattenElements(tmp);
+			
+			result.elements = newElements;
+
+			return result;
+		},
+		
+		copySubstitute: function(fnNodeMap) {
+			var result = new ns.Query();
+			result.type = this.type;
+			result.distinct = this.distinct;
+			result.reduced = this.reduced;
+			result.isResultStar = this.isResultStar;
+			result.limit = this.limit;
+			result.offset = this.offset;
+	 				
+			result.projectVars = this.projectVars.copySubstitute(fnNodeMap);
+
+			//console.log("PROJECTION  " + this.projectVars + " --- " + result.projectVars);
+
+			/*
+			for(key in this.projection) {
+				var value = this.projection[key]; 
+
+				var k = fnNodeMap(ns.Node.v(key));
+				var v = value ? value.copySubstitute(fnNodeMap) : null;
+				
+				result.projection[k] = v;
+			}*/
+			
+			if(this.constructTemplate) {
+				result.constructTemplate = this.constructTemplate.copySubstitute(fnNodeMap);
+			}
+
+			result.orderBy = this.orderBy == null
+				? null
+				:  _.map(this.orderBy, function(item) { return item.copySubstitute(fnNodeMap); });			
+
+			result.groupBy = this.groupBy == null
+				? null
+				:  _.map(this.groupBy, function(item) { return item.copySubstitute(fnNodeMap); });			
+
+
+			result.elements = _(this.elements).map(function(element) {
+//				console.log("Element: ", element);
+//				debugger;
+				var r = element.copySubstitute(fnNodeMap);
+				return r;
+			});		
+
+			//console.log("CLONE ORIG " + this);
+			//console.log("CLONE RES " + result);
+			
+			return result;
+		},
+		
+		
+		/**
+		 * Convenience function for setting limit, offset and distinct from JSON
+		 * 
+		 * @param options
+		 */
+		setOptions: function(options) {
+			if(typeof options === 'undefined') {
+				return;
+			}
+			
+			if(typeof options.limit !== 'undefined') {
+				this.setLimit(options.limit);
+			}
+			
+			if(typeof(options.offset) !== 'undefined') {
+				this.setOffset(options.offset);
+			}
+
+			if(typeof(options.distinct) !== 'undefined') {
+				this.setDistinct(options.distinct);
+			}
+		},
+		
+		setOffset: function(offset) {
+			this.offset = offset ? offset : null;
+		},
+
+		setLimit: function(limit) {
+			if(limit === 0) {
+				this.limit = 0;
+			} else {
+				this.limit = limit ? limit : null;
+			}
+		},
+		
+		setDistinct: function(enable) {
+			this.distinct = (enable === true) ? true : false;
+		},
+
+		toString: function() {
+			switch(this.type) {
+			case ns.QueryType.Select: return this.toStringSelect();
+			case ns.QueryType.Construct: return this.toStringConstruct();
+			
+			}
+		},
+
+			
+		toStringProjection: function() {
+			if(this.isResultStar) {
+				return "*";
+			}
+
+			return "" + this.projectVars;		
+		},
+
+		
+		toStringLimitOffset: function() {
+			var result = "";
+			
+			if(this.limit != null) {
+				result += " Limit " + this.limit;
+			}
+			
+			if(this.offset != null) {
+				result += " Offset " + this.offset;
+			}
+			
+			return result;		
+		},
+		
+
+		toStringSelect: function() {
+			var distinctStr = this.distinct ? "Distinct " : "";
+			
+			//console.log("Elements: ", this.elements);
+			var result = "Select " + distinctStr + this.toStringProjection() + " {" + ns.joinElements(" . ", this.elements) + "} " + this.toStringGroupBy() + this.toStringOrderBy() + this.toStringLimitOffset();
+			
+			return result;		
+		},
+
+		toStringConstruct: function() {
+			var result = "Construct " + this.constructTemplate + " {" + ns.joinElements(" . ", this.elements) + "}" + this.toStringOrderBy() + this.toStringLimitOffset();
+			
+			return result;
 		}
-	};
+	});
 
 	
 	ns.fnIdentity = function(x) { return x; };
 	
-	ns.Query.prototype.clone = function() {
-		return this.copySubstitute(ns.fnIdentity);
-	};
-	
-	ns.Query.prototype.flatten = function() {
-		var result = this.clone();
 
-		var tmp = _.map(result.elements, function(element) { return element.flatten(); });
-
-		var newElements = ns.flattenElements(tmp);
-		
-		result.elements = newElements;
-
-		return result;
-	};
-	
-	ns.Query.prototype.copySubstitute = function(fnNodeMap) {
-		var result = new ns.Query();
-		result.type = this.type;
-		result.distinct = this.distinct;
-		result.reduced = this.reduced;
-		result.isResultStar = this.isResultStar;
-		result.limit = this.limit;
-		result.offset = this.offset;
- 				
-		result.projectVars = this.projectVars.copySubstitute(fnNodeMap);
-
-		//console.log("PROJECTION  " + this.projectVars + " --- " + result.projectVars);
-
-		/*
-		for(key in this.projection) {
-			var value = this.projection[key]; 
-
-			var k = fnNodeMap(ns.Node.v(key));
-			var v = value ? value.copySubstitute(fnNodeMap) : null;
-			
-			result.projection[k] = v;
-		}*/
-		
-		if(this.constructTemplate) {
-			result.constructTemplate = this.constructTemplate.copySubstitute(fnNodeMap);
-		}
-
-		result.orderBy = this.orderBy == null
-			? null
-			:  _.map(this.orderBy, function(item) { return item.copySubstitute(fnNodeMap); });			
-
-		result.groupBy = this.groupBy == null
-			? null
-			:  _.map(this.groupBy, function(item) { return item.copySubstitute(fnNodeMap); });			
-
-
-		result.elements = _.map(this.elements, function(element) { return element.copySubstitute(fnNodeMap); });		
-
-		//console.log("CLONE ORIG " + this);
-		//console.log("CLONE RES " + result);
-		
-		return result;
-	};
-	
-	
-	/**
-	 * Convenience function for setting limit, offset and distinct from JSON
-	 * 
-	 * @param options
-	 */
-	ns.Query.prototype.setOptions = function(options) {
-		if(typeof options === 'undefined') {
-			return;
-		}
-		
-		if(typeof options.limit !== 'undefined') {
-			this.setLimit(options.limit);
-		}
-		
-		if(typeof(options.offset) !== 'undefined') {
-			this.setOffset(options.offset);
-		}
-
-		if(typeof(options.distinct) !== 'undefined') {
-			this.setDistinct(options.distinct);
-		}
-	};
-	
-	ns.Query.prototype.setOffset = function(offset) {
-		this.offset = offset ? offset : null;
-	};
-
-	ns.Query.prototype.setLimit = function(limit) {
-		if(limit === 0) {
-			this.limit = 0;
-		} else {
-			this.limit = limit ? limit : null;
-		}
-	};
-	
-	ns.Query.prototype.setDistinct = function(enable) {
-		this.distinct = (enable === true) ? true : false;
-	};
-
-	ns.Query.prototype.toString = function() {
-		switch(this.type) {
-		case ns.QueryType.Select: return this.toStringSelect();
-		case ns.QueryType.Construct: return this.toStringConstruct();
-		
-		}
-	};
-
-		
-	ns.Query.prototype.toStringProjection = function() {
-		if(this.isResultStar) {
-			return "*";
-		}
-
-		return "" + this.projectVars;		
-	};
-
-	
-	ns.Query.prototype.toStringLimitOffset = function() {
-		var result = "";
-		
-		if(this.limit != null) {
-			result += " Limit " + this.limit;
-		}
-		
-		if(this.offset != null) {
-			result += " Offset " + this.offset;
-		}
-		
-		return result;		
-	};
-	
-	
-	
-	ns.Query.prototype.toStringSelect = function() {
-		var distinctStr = this.distinct ? "Distinct " : "";
-		
-		//console.log("Elements: ", this.elements);
-		var result = "Select " + distinctStr + this.toStringProjection() + " {" + ns.joinElements(" . ", this.elements) + "} " + this.toStringGroupBy() + this.toStringOrderBy() + this.toStringLimitOffset();
-		
-		return result;		
-	};
-
-	ns.Query.prototype.toStringConstruct = function() {
-		var result = "Construct " + this.constructTemplate + " {" + ns.joinElements(" . ", this.elements) + "}" + this.toStringOrderBy() + this.toStringLimitOffset();
-		
-		return result;
-	};
 	
 	
 	
@@ -3421,30 +3590,42 @@ module["exports"] = Jassa;
 // Move some utility functions from Elements here
 (function() {
 	
-	var col = Jassa.utils.collections;
+	var util = Jassa.util;
 
 	var ns = Jassa.sparql;
 	
+	ns.Generator = Class.create({
+		next: function() {
+			throw "Override me";
+		}
+	});
+	
 	/**
-	 * Another class that mimics Jena's behavour.
+	 * Another class that mimics Jena's behaviour.
 	 * 
 	 * @param prefix
 	 * @param start
 	 * @returns {ns.GenSym}
 	 */
-	ns.GenSym = function(prefix, start) {
-		this.prefix = prefix ? prefix : 'v';
-		this.nextValue = start ? start : 0;
-	};
+	ns.GenSym = Class.create(ns.Generator, {
+		initialize: function(prefix, start) {
+			this.prefix = prefix ? prefix : "v";
+			this.nextValue = start ? start : 0;
+		},
 	
-	ns.GenSym.prototype.next = function() {
-		++this.nextValue;
-		
-		var result = this.prefix + "_" + this.nextValue;
-		
+		next: function() {
+			++this.nextValue;
+			
+			var result = this.prefix + "_" + this.nextValue;
+			
+			return result;
+		}
+	});
+
+	ns.GenSym.create = function(prefix) {
+		var result = new ns.GenSym(prefix, 0);
 		return result;
 	};
-
 
 	/**
 	 * 
@@ -3452,22 +3633,26 @@ module["exports"] = Jassa;
 	 * @param blacklist Array of strings
 	 * @returns {ns.GeneratorBlacklist}
 	 */
-	ns.GeneratorBlacklist = function(generator, blacklist) {
-		this.generator = generator;
-		this.blacklist = blacklist;
-	};
-	
-	ns.GeneratorBlacklist.prototype = {
+	ns.GeneratorBlacklist = Class.create(ns.Generator, {
+		
+		initialize: function(generator, blacklist) {
+			this.generator = generator;
+			this.blacklist = blacklist;
+		},
+
 		next: function() {
 			var result;
 			
 			do {
 				result = this.generator.next();
-			} while(_(this.blacklist).contains(result));
+			} while(_.contains(this.blacklist, result));
 				
 			return result;
 		}
-	};
+
+	});
+
+
 
 	ns.fnToString = function(x) {
 		return x.toString();
@@ -3479,10 +3664,62 @@ module["exports"] = Jassa;
 
 
 	
+	ns.PatternUtils = {
+		getVarsMentioned: function(elements) {
+			var result = [];
+			_.each(elements, function(element) {
+				_(result).union(element.getVarsMentioned());
+			});
+			
+			return result;
+		}
+	};
+			
+	
 	ns.ElementUtils = {
 		flatten: function(elements) {
 			var result = _.map(elements, function(element) { return element.flatten(); });
 
+			return result;
+		},
+		
+		
+		/**
+		 * Bottom up
+		 * - Merge ElementTripleBlocks
+		 * - Merge ElementGroups
+		 */
+		flattenElements: function(elements) {
+			var result = [];
+			
+			var triples = [];
+			
+			var tmps = [];
+			_.each(elements, function(item) {
+				if(item instanceof ns.ElementGroup) {
+					tmps.push.apply(tmps, item.elements);
+				} else {
+					tmps.push(item);
+				}
+			});
+			
+			_.each(tmps, function(item) {
+				if(item instanceof ns.ElementTriplesBlock) {
+					triples.push.apply(triples, item.getTriples());
+				} else {
+					result.push(item);
+				}
+			});		
+
+			if(triples.length > 0) {			
+				var ts = ns.uniqTriples(triples);
+				
+				result.unshift(new ns.ElementTriplesBlock(ts));
+			}
+			
+			//console.log("INPUT ", elements);
+			//console.log("OUTPUT ", result);
+			
 			return result;
 		},
 		
@@ -3502,7 +3739,7 @@ module["exports"] = Jassa;
 			}
 
 			// Rename all variables that are in common
-			var result = new col.HashBidiMap(ns.fnNodeEquals);
+			var result = new util.HashBidiMap(ns.fnNodeEquals);
 			//var rename = {};
 
 			_(vbs).each(function(oldVar) {
@@ -3629,14 +3866,75 @@ module["exports"] = Jassa;
 	};
 
 	
-})();/**
+})();(function() {
+	
+	var util = Jassa.util;
+	var ns = Jassa.service;
+	
+	
+	ns.ResultSet = Class.create(util.Iterator, {
+		
+	});
+	
+	/**
+	 * Resultset based on an array of bindings
+	 * 
+	 * Converts a plain json result set to an array of bindings...
+	 * 
+	 * TODO This class already exists somewhere in Sponate...
+	 */
+	ns.ResultSetArrayIteratorBinding = Class.create(ns.ResultSet, {
+		initialize: function(itBinding) {
+			this.itBinding = itBinding;
+		},
+		
+		hasNext: function() {
+			return this.itBinding.hasNext();
+		},
+		
+		next: function() {
+			return this.nextBinding();
+		},
+		
+		nextBinding: function() {
+			return this.itBinding.next();
+		},
+		
+		// Return the binding array
+		getBindings: function() {
+			return this.itBinding.getArray();
+		}
+	});
+	
+	
+})();
+/**
  * Sparql endpoint class.
  * Allows execution of sparql queries against a preconfigured service
  * 
  */			
-(function() {
+(function($) {
 
-	var ns = Jassa.sparql;
+	var sparql= Jassa.sparql;
+	var util = Jassa.util;
+	
+	var ns = Jassa.service;
+
+	// TODO Maybe move to a conversion utils package.
+	ns.jsonToResultSet = function(json) {
+
+		var bindings = json.results.bindings;
+
+		var tmp = bindings.map(function(b) {
+			var bindingObj = sparql.Binding.fromTalisJson(b);
+			return bindingObj;					
+		});
+		
+		var itBinding = new util.IteratorArray(tmp);
+		
+		var result = new ns.ResultSetArrayIteratorBinding(itBinding);
+		return result;
+	};
 	
 	/**
 	 * SparqlServiceHttp
@@ -3646,15 +3944,14 @@ module["exports"] = Jassa;
 	 * @param defaultGraphUris The RDF graphs on which to run the query by default
 	 * @param httpArgs A JSON object with additional arguments to include in HTTP requests
 	 */
-	ns.SparqlServiceHttp = function(serviceUri, defaultGraphUris, httpArgs) {
-		this.serviceUri = serviceUri;
-		this.setDefaultGraphs(defaultGraphUris);
-		
-		this.httpArgs = httpArgs;
-	};
-	
-	ns.SparqlServiceHttp.prototype = {
+	ns.SparqlServiceHttp = Class.create({
+		initialize: function(serviceUri, defaultGraphUris, httpArgs) {
+			this.serviceUri = serviceUri;
+			this.setDefaultGraphs(defaultGraphUris);
 			
+			this.httpArgs = httpArgs;
+		},
+
 		/**
 		 * This method is intended to be used by caches,
 		 * 
@@ -3717,44 +4014,30 @@ module["exports"] = Jassa;
 		},
 	
 
+		/**
+		 * 
+		 * @returns {Promise<sparql.ResultSet>}
+		 */
 		execSelect: function(query, options) {
-			return this.execAny(query, options);
+			var promise = this.execAny(query, options);
+			var result = promise.pipe(ns.jsonToResultSet);
+			return result;
 		},
 	
 		execAsk: function(query, options) {
 			return this.execAny(query, options).pipe(function(json) { return json['boolean']; });
 		},
-	
-		// TODO What to return: e.g. RdfJson vs RdfQuery
-		execConstruct: function(query, options) {
-			return this.execAny(query, options);
-		},
-	
-	
-		execDescribe: function(query, options) {
-			return this.execAny(query, options);
-		}
-	};
 
-	
-	/**
-	 * 
-	 * SparqlServiceDelay 
-	 */
-	ns.SparqlServiceDelay = function(delegate, delay) {
-		this.delegate = delegate;
-		this.scheduler = new Scheduler(delay); 
-	};
-	
-	ns.SparqlServiceDelay.prototype = {
-		execSelect: function(queryString, callback) {
-			return delegate.execSelect(queryString, callback);
+		// Returns an iterator of triples
+		execConstructTriples: function(query, options) {
+			return this.execAny(query, options);
 		},
 	
-		execAsk: function(queryString, callback) {
-			return delegate.execAsk(queryString, callback);
+		execDescribeTriples: function(query, options) {
+			return this.execAny(query, options);
 		}
-	};
+	});
+
 
 	
 
@@ -3841,11 +4124,11 @@ module["exports"] = Jassa;
 			//console.log('SPARQL Data for hash ' + hash, data);	
 		}
 
-		var result = jQuery.Deferred();
+		var result = $.Deferred();
 		if(data) { 
 			result.resolve(data);
 		} else {
-			var result = jQuery.ajax(ajaxObj);
+			var result = $.ajax(ajaxObj);
 			
 			if(useCache) {
 				result.pipe(function(response) {
@@ -3865,7 +4148,9 @@ module["exports"] = Jassa;
 		return result;
 	};
 
-})();
+})(jQuery);
+
+
 
 (function() {
 
@@ -3979,7 +4264,308 @@ module["exports"] = Jassa;
 
 })();
 
-(function() {
+/**
+ * Sparql endpoint class.
+ * Allows execution of sparql queries against a preconfigured service
+ * 
+ */			
+(function($) {
+
+	var ns = Jassa.service;
+	
+	
+	ns.QueryExecution = Class.create({
+		execSelect: function() {
+			throw "Not overridden";
+		},
+		
+		execAsk: function() {
+			throw "Not overridden";			
+		},
+		
+		execDescribeTriples: function() {
+			throw "Not overridden";
+		},
+		
+		execConstructTriples: function() {
+			throw "Not overridden";			
+		},
+		
+		setTimeOut: function(timeSpanInMs) {
+			throw "Not overridden";
+		}
+	});
+	
+	
+	ns.QueryExecutionHttp = Class.create(ns.QueryExecution, {
+		initialize: function(queryString, serviceUri, defaultGraphUris, httpArgs) {
+			this.queryString = queryString;
+			this.serviceUri = serviceUri;
+			this.defaultGraphUris = defaultGraphUris;
+			
+			this.httpArgs = httpArgs;
+		},
+		
+		/**
+		 * 
+		 * @returns {Promise<sparql.ResultSet>}
+		 */
+		execSelect: function() {
+			var result = this.execAny(this.queryString).pipe(ns.jsonToResultSet);
+			return result;
+		},
+	
+		execAsk: function(query, options) {
+			var result = this.execAny(query, options).pipe(function(json) {
+				return json['boolean'];
+			});
+			
+			return result;
+		},
+
+		// Returns an iterator of triples
+		execConstructTriples: function() {
+			return this.execAny(queryString);
+		},
+	
+		execDescribeTriples: function() {
+			return this.execAny(queryString);
+		},
+		
+//		setTimeOut: function(timeSpanInMs) {
+//			timeSpanInMs
+//		},
+
+
+		/**
+		 * This method is intended to be used by caches,
+		 * 
+		 * A service is not assumed to return the same result for
+		 * a query if this method returned different hashes.   
+		 * 
+		 * 
+		 */
+//		getStateHash: function() {
+//			var idState = {
+//					serviceUri: this.serviceUri,
+//					defaultGraphUris: this.defaultGraphUris
+//			}
+//			
+//			var result = JSON.stringify(idState);
+//			
+//			return result;
+//		},
+//			
+//		setDefaultGraphs: function(uriStrs) {
+//			this.defaultGraphUris = uriStrs ? uriStrs : [];
+//		},
+//	
+//		getDefaultGraphs: function() {
+//			return this.defaultGraphUris;
+//		},
+	
+		execAny: function(queryString, options) {
+		
+			if(!queryString) {
+				console.error("Empty queryString - should not happen");
+			}
+			
+//			if(this.proxyServiceUri) {
+//				httpOptions[this.proxyParamName] = serviceUri;
+//				serviceUri = this.proxyServiceUri;
+//			}
+			
+		
+			var result = ns.execQuery(this.serviceUri, this.defaultGraphUris, queryString, this.httpArgs, options);
+
+			return result;
+		}
+	});
+
+})();
+(function($) {
+
+	var ns = Jassa.service;
+	
+	
+	ns.QueryExecutionFactory = Class.create({
+		getServiceId: function() {
+			throw "Not overridden";			
+		},
+
+		getStateHash: function() {
+			throw "Not overridden";
+		},
+		
+		createQueryExecution: function(queryStrOrObj) {
+			throw "Not overridden";
+		}
+	});
+
+	
+	/**
+	 * Base class for processing query strings.
+	 */
+	ns.QueryExecutionFactoryBaseString = Class.create(ns.QueryExecutionFactory, {
+		createQueryExecution: function(queryStrOrObj) {
+			var result;
+			if(_(queryStrOrObj).isString()) {
+				result = this.createQueryExecutionStr(queryStrOrObj);
+			} else {
+				result = this.createQueryExecutionObj(queryStrOrObj);
+			}
+			
+			return result;
+		},
+		
+		createQueryExecutionObj: function(queryObj) {
+			var queryStr = "" + queryObj;
+			var result = this.createQueryExecutionStr(queryStr);
+			
+			return result;
+		},
+		
+		createQueryExecutionStr: function(queryStr) {
+			throw "Not implemented";
+		}
+	});
+	
+
+	ns.QueryExecutionFactoryHttp = Class.create(ns.QueryExecutionFactoryBaseString, {
+		initialize: function(serviceUri, defaultGraphUris, httpArgs) {
+			this.serviceUri = serviceUri;
+			this.setDefaultGraphs(defaultGraphUris);
+			
+			this.httpArgs = httpArgs;
+		},
+
+		getServiceId: function() {
+			return this.serviceUri;
+		},
+		
+		/**
+		 * This method is intended to be used by caches,
+		 * 
+		 * A service is not assumed to return the same result for
+		 * a query if this method returned different hashes.   
+		 * 
+		 * 
+		 */
+		getStateHash: function() {
+//			var idState = {
+//					serviceUri: this.serviceUri,
+//					defaultGraphUris: this.defaultGraphUris
+//			}
+//			
+//			var result = JSON.stringify(idState);
+
+			var result = JSON.strngify(this.defaultGraphUris);
+			
+			return result;
+		},
+			
+		setDefaultGraphs: function(uriStrs) {
+			this.defaultGraphUris = uriStrs ? uriStrs : [];
+		},
+	
+		getDefaultGraphs: function() {
+			return this.defaultGraphUris;
+		},
+		
+		createQueryExecutionStr: function(queryStr) {
+			var result = new ns.QueryExecutionHttp(queryStr, this.serviceUri, this.defaultGraphUris, this.httpArgs)
+			return result;
+		},
+		
+		createQueryExecutionObj: function($super, query) {
+			if(true) {
+				if(query.flatten) {
+					var before = query;
+					query = before.flatten();
+					
+					//console.log("FLATTEN BEFORE: " + before, before);
+					//console.log("FLATTEN AFTER:"  + query, query);
+				}
+			}
+			
+			var result = $super(query);
+			return result;
+		}
+	});
+	
+})(jQuery);(function() {
+
+	var ns = Jassa.service;
+	
+	ns.ServiceUtils = {
+	
+		/**
+		 * TODO Rather use .close()
+		 * 
+		 * @param rs
+		 * @returns
+		 */
+		consumeResultSet: function(rs) {
+			while(rs.hasNext()) {
+				rs.nextBinding();
+			};
+		},
+			
+		resultSetToList: function(rs, variable) {
+			var result = [];
+			while(rs.hasNext()) {
+				var binding = rs.nextBinding();
+
+				var node = binding.get(variable);
+				result.push(node);
+			}
+			return result;
+		},
+			
+		
+		resultSetToInt: function(rs, variable) {
+			var result = null;
+
+			if(rs.hasNext()) {
+				var binding = rs.nextBinding();
+
+				var node = binding.get(variable);
+				
+				// TODO Validate that the result actually is int.
+				result = node.getLiteralValue();
+			}
+			
+			return result;
+		},
+
+		
+		fetchList: function(queryExecution, variable) {
+			var self = this;
+			var result = queryExecution.execSelect().pipe(function(rs) {
+				var r = self.resultSetToList(rs, variable);
+				return r;
+			});
+		
+			return result;		
+		},
+		
+		
+		/**
+		 * Fetches the first column of the first row of a result set and parses it as int.
+		 * 
+		 */
+		fetchInt: function(queryExecution, variable) {
+			var self = this;
+			var result = queryExecution.execSelect().pipe(function(rs) {
+				var r = self.resultSetToInt(rs,variable);
+				return r;
+			});
+
+			return result;
+		}
+	};
+
+})();(function() {
 	
 	var ns = Jassa.sparql;
 	
@@ -4041,11 +4627,8 @@ module["exports"] = Jassa;
 		},
 
 		evalNodeValue: function(expr, binding) {
-		},
-
-		evalConstant : function(expr, binding) {
-
 		}
+
 	});
 
 	
@@ -4128,7 +4711,7 @@ module["exports"] = Jassa;
 })();(function() {
 
 	var sparql = Jassa.sparql;
-	var col = Jassa.utils.collections;
+	var util = Jassa.util;
 
 	var ns = Jassa.sponate;
 	
@@ -4394,7 +4977,7 @@ module["exports"] = Jassa;
 				return proceed;
 			}
 			
-			col.TreeUtils.visitDepthFirst(pattern, ns.PatternUtils.getChildren, fn);
+			util.TreeUtils.visitDepthFirst(pattern, ns.PatternUtils.getChildren, fn);
 			
 			return result;
 		},
@@ -5365,9 +5948,31 @@ module["exports"] = Jassa;
 
 (function() {
 
+	
+	var util = Jassa.util;
 	var sparql = Jassa.sparql;
 	
 	var ns = Jassa.sponate;
+	
+	ns.QueryConfig = Class.create({
+		initialize: function(criteria, limit, offset) {
+			this.criteria = criteria;
+			this.limit = limit;
+			this.offset = offset;
+		},
+		
+		getCriteria: function() {
+			return this.criteria;
+		},
+		
+		getLimit: function() {
+			return this.limit;
+		},
+		
+		getOffset: function() {
+			return this.offset;
+		}
+	});
 	
 	/**
 	 * The cursor is both a flow api and a result set / iterator.
@@ -5423,7 +6028,25 @@ module["exports"] = Jassa;
 	ns.QueryFlow = Class.create({
 		initialize: function(store, criteria) {
 			this.store = store;
-			this.criteria = criteria;
+			this.config = {};
+			
+			this.config.criteria = criteria;
+//			this.criteria = criteria;
+//			
+//			this.limit = null;
+//			this.offset = null;
+		},
+		
+		skip: function(offset) {
+			this.config.offset = offset;
+			
+			return this;
+		},
+		
+		limit: function(limit) {
+			this.config.limit = limit;
+			
+			return this;
 		},
 		
 		/*
@@ -5460,9 +6083,12 @@ module["exports"] = Jassa;
 		
 		// TODO This is a hack right now - not sure how to design the execution yet
 		execute: function() {
-			var config = {
-				criteria: this.criteria
-			};
+//			var config = {
+//				criteria: this.criteria,
+//				limit: this.limit,
+//				offset: this.offset
+//			};
+			var config = new ns.QueryConfig(this.config.criteria, this.config.limit, this.config.offset);
 			
 			var result = this.store.execute(config);
 			return result;
@@ -5481,8 +6107,8 @@ module["exports"] = Jassa;
 		 * A sparql service (assumed to return talis json rdf)
 		 * 
 		 */
-		initialize: function(service, context, mappingName) {
-			this.service = service;
+		initialize: function(queryExecutionFactory, context, mappingName) {
+			this.queryExecutionFactory = queryExecutionFactory;
 			this.context = context;
 			this.mappingName = mappingName;
 		},
@@ -5504,7 +6130,9 @@ module["exports"] = Jassa;
 			// b) post processors
 			
 			var context = this.context;
-			var criteria = config.criteria;
+			var criteria = config.getCriteria();
+			var limit = config.getLimit();
+			var offset = config.getOffset();
 			
 			//console.log('context', JSON.stringify(this.context), this.context.getNameToMapping());
 			
@@ -5530,13 +6158,13 @@ module["exports"] = Jassa;
 			//console.log('mapping:', mapping);
 			
 			// Retrieve the mapping's table and the associated element
-			var element = this.context.getElement(mapping.getTableName());
-			
-			
+			var element = this.context.getElement(mapping.getTableName());			
 			
 			var pattern = mapping.getPattern();
 			//console.log('Pattern here ' + JSON.stringify(pattern));
-						
+
+			
+			
 			
 			var vars = pattern.getVarsMentioned();
 			//console.log('' + vars);
@@ -5547,6 +6175,32 @@ module["exports"] = Jassa;
 				idExpr = pattern.getKeyExpr();
 			}
 			
+						
+			var requireSubQuery = limit != null || offset != null;
+			if(requireSubQuery) {
+				
+				var idVar;
+				if(!(idExpr instanceof sparql.ExprVar)) {
+					console.log("[ERROR] Currently the idExpr must be a variable when used with limit and offset. This restriction can be lifted but is not implemented yet :(");
+					throw "Bailing out";
+				}
+				idVar = idExpr.asVar();
+				
+				var subQuery = new sparql.Query();
+				
+				var subQueryElements = subQuery.getElements();
+				subQueryElements.push(element);
+				subQuery.setLimit(limit);
+				subQuery.setOffset(offset);
+				subQuery.setDistinct(true);
+				subQuery.getProjectVars().add(idVar);
+				element = new sparql.ElementGroup([
+				                                   new sparql.ElementSubQuery(subQuery),
+				                                   element]);
+
+			}
+
+			
 			//console.log('' + pattern, idExpr);
 			//console.log('idExpr' + idExpr);
 			
@@ -5555,14 +6209,13 @@ module["exports"] = Jassa;
 			var query = new sparql.Query();
 			query.getElements().push(element);
 			_(vars).each(function(v) { query.getProjectVars().add(v); });
-			// PW: commented out duw to performance issues when calling store.<id>.find().asList()
-			// if(idExpr != null) {
-			// 	//console.log('Expr' + JSON.stringify(idExpr));
+			if(idExpr != null) {
+				//console.log('Expr' + JSON.stringify(idExpr));
 				
-			// 	var sc = new sparql.SortCondition(idExpr, 1);
+				var sc = new sparql.SortCondition(idExpr, 1);
 
-			// 	query.getOrderBy().push(sc);
-			// }
+				query.getOrderBy().push(sc);
+			}
 			//query.setLimit(10);
 			
 			
@@ -5574,7 +6227,7 @@ module["exports"] = Jassa;
 				// TODO
 				
 				while(it.hasNext()) {
-					var binding = it.next();
+					var binding = it.nextBinding();
 					
 					instancer.process(binding);
 				}
@@ -5601,7 +6254,7 @@ module["exports"] = Jassa;
 					console.log('[DEBUG] ' + delta + ' items filtered on the client ('+ fil + '/' + all + ' remaining) using criteria ' + JSON.stringify(criteria));
 
 					
-					result = new ns.IteratorArray(filtered);
+					result = new util.IteratorArray(filtered);
 					
 				} else {
 					throw 'Implement me';
@@ -5611,7 +6264,8 @@ module["exports"] = Jassa;
 			};
 
 			
-			var result = this.service.execSelect(query).pipe(processResult);			
+			var qe = this.queryExecutionFactory.createQueryExecution(query);
+			var result = qe.execSelect().pipe(processResult);			
 			
 			return result;
 			//console.log('' + query);
@@ -6125,38 +6779,43 @@ or simply: Angular + Magic Sparql = Angular Marql
 	// In fact, the latter should go to the facade file
 	
 	var sparql = Jassa.sparql; 
-	var col = Jassa.utils.collections;
+	var util = Jassa.util;
 	var ns = Jassa.sponate;
 
 	
-	ns.ServiceSponateSparqlHttp = Class.create({
-		initialize: function(rawService) {
-			this.rawService = rawService;
-		},
-		
-		execSelect: function(query, options) {
-			var promise = this.rawService.execSelect(query, options);
-			
-			var result = promise.pipe(function(json) {
-				var bindings = json.results.bindings;
-
-				var tmp = bindings.map(function(b) {
-					//console.log('Talis Json' + JSON.stringify(b));
-					var bindingObj = sparql.Binding.fromTalisJson(b);
-					//console.log('Binding obj: ' + bindingObj);
-					return bindingObj;					
-				});
-				
-				var it = new ns.IteratorArray(tmp);
-				
-				//console.log()
-				
-				return it;
-			});
-			
-			return result;
-		}
-	});
+	/**
+	 * @Deprecated - Do not use - will be removed asap.
+	 * Superseded by service.QueryExecutionFactoryHttp
+	 * 
+	 */
+//	ns.ServiceSponateSparqlHttp = Class.create({
+//		initialize: function(rawService) {
+//			this.rawService = rawService;
+//		},
+//		
+//		execSelect: function(query, options) {
+//			var promise = this.rawService.execSelect(query, options);
+//			
+//			var result = promise.pipe(function(json) {
+//				var bindings = json.results.bindings;
+//
+//				var tmp = bindings.map(function(b) {
+//					//console.log('Talis Json' + JSON.stringify(b));
+//					var bindingObj = sparql.Binding.fromTalisJson(b);
+//					//console.log('Binding obj: ' + bindingObj);
+//					return bindingObj;					
+//				});
+//				
+//				var it = new ns.IteratorArray(tmp);
+//				
+//				//console.log()
+//				
+//				return it;
+//			});
+//			
+//			return result;
+//		}
+//	});
 
 	
 	/**
@@ -6164,50 +6823,17 @@ or simply: Angular + Magic Sparql = Angular Marql
 	 * Only SPARQL supported yet.
 	 * 
 	 */
-	ns.ServiceUtils = {
-	
-		createSparqlHttp: function(serviceUrl, defaultGraphUris, httpArgs) {
-		
-			var rawService = new sparql.SparqlServiceHttp(serviceUrl, defaultGraphUris, httpArgs);
-			var result = new ns.ServiceSponateSparqlHttp(rawService);
-			
-			return result;
-		}	
-	};
-	
-	
-	/**
-	 * Utility class to create an iterator over an array.
-	 * 
-	 */
-	ns.IteratorArray = function(array, offset) {
-		this.array = array;
-		this.offset = offset ? offset : 0;
-	};
-	
-	ns.IteratorArray.prototype = {
-		hasNext: function() {
-			var result = this.offset < this.array.length;
-			return result;
-		},
-		
-		next: function() {
-			var hasNext = this.hasNext();
-			
-			var result;
-			if(hasNext) {			
-				result = this.array[this.offset];
-				
-				++this.offset;
-			}
-			else {
-				result = null;
-			}
-			
-			return result;
-		}		
-	};
-	
+//	ns.ServiceUtils = {
+//	
+//		createSparqlHttp: function(serviceUrl, defaultGraphUris, httpArgs) {
+//		
+//			var rawService = new sparql.SparqlServiceHttp(serviceUrl, defaultGraphUris, httpArgs);
+//			var result = new ns.ServiceSponateSparqlHttp(rawService);
+//			
+//			return result;
+//		}	
+//	};
+//	
 
 	/*
 	ns.AliasedElement = Class.create({
@@ -6308,7 +6934,7 @@ or simply: Angular + Magic Sparql = Angular Marql
 			this.rootAlias = this.aliasGenerator.next();
 			
 
-			var rootState = this.createTargetState(this.rootAlias, new col.HashBidiMap(), [], rootElement, []);
+			var rootState = this.createTargetState(this.rootAlias, new util.HashBidiMap(), [], rootElement, []);
 
 			this.aliasToState[this.rootAlias] = rootState;
 			
@@ -6419,7 +7045,7 @@ or simply: Angular + Magic Sparql = Angular Marql
 			
 			var rootNode = this.getRootNode();
 
-			col.TreeUtils.visitDepthFirst(rootNode, ns.JoinBuilderUtils.getChildren, function(node) {
+			util.TreeUtils.visitDepthFirst(rootNode, ns.JoinBuilderUtils.getChildren, function(node) {
 				result.push(node.getElement());
 				return true;
 			});
@@ -7520,11 +8146,4095 @@ or simply: Angular + Magic Sparql = Angular Marql
 				ngScope.$apply();
 			}
 			
-		}).fail(function() {
-			ngDeferred.fail();
+		}).fail(function(data) {
+			ngDeferred.reject(data);
 		});
 		
 		return ngDeferred.promise;
 	}
 
+})();
+(function() {
+
+	var ns = Jassa.facete;
+	
+
+	/**
+	 * 
+	 * @param direction
+	 * @param resource
+	 * @returns {ns.Step}
+	 */
+	ns.Step = Class.create({
+		
+		initialize: function(propertyName, isInverse) {
+			this.type = "property";
+			this.propertyName = propertyName;
+			this._isInverse = isInverse;
+		},
+	
+		toJson: function() {
+			var result = {
+				isInverse: this.isInverse,
+				propertyName: this.propertyName
+			};
+			
+			return result;
+		},
+		
+		getPropertyName: function() {
+			return this.propertyName;
+		},
+
+		isInverse: function() {
+			return this._isInverse;
+		},
+
+
+		equals: function(other) {
+			return _.isEqual(this, other);
+		},
+
+		toString: function() {
+			if(this._isInverse) {
+				return "<" + this.propertyName;
+			} else {
+				return this.propertyName;
+			}
+		},
+		
+		createElement: function(sourceVar, targetVar, generator) {
+			var propertyNode = sparql.Node.uri(this.propertyName);
+			
+			var triple;
+			if(this._isInverse) {
+				triple = new rdf.Triple(targetVar, propertyNode, sourceVar);
+			} else {
+				triple = new rdf.Triple(sourceVar, propertyNode, targetVar);
+			}
+			
+			var result = new sparql.ElementTriplesBlock([triple]);
+			
+			return result;
+		}
+	});
+	
+	ns.Step.classLabel = 'Step';
+
+	
+	/**
+	 * Create a Step from a json specification:
+	 * {
+	 *     propertyName: ... ,
+	 *     isInverse: 
+	 * }
+	 * 
+	 * @param json
+	 */
+	ns.Step.fromJson = function(json) {
+		var propertyName = checkNotNull(json.propertyName);
+		var isInverse = json.IsInverse();
+		
+		var result = new ns.Step(propertyName, isInverse);
+		return result;
+	};
+	
+	ns.Step.parse = function(str) {
+		var result;
+		if(_(str).startsWith("<")) {
+			result = new ns.Step(str.substring(1), true);
+		} else {
+			result = new ns.Step(str, false);
+		}
+		return result;
+	},
+
+	
+	/**
+	 * A path is a sequence of steps
+	 * 
+	 * @param steps
+	 * @returns {ns.Path}
+	 */
+	ns.Path = Class.create({
+		initialize: function(steps) {
+			this.steps = steps ? steps : [];
+		},
+		
+		isEmpty: function() {
+			var result = this.steps.length === 0;
+			return result;
+		},
+		
+		toString: function() {
+			var result = this.steps.join(" ");
+			return result;
+		},	
+	
+		concat: function(other) {
+			var result = new ns.Path(this.steps.concat(other.steps));
+			return result;
+		},
+	
+		getLastStep: function() {
+			var steps = this.steps;
+			var n = steps.length;
+			
+			var result;
+			if(n === 0) {
+				result = null;
+			} else {
+				result = steps[n - 1];
+			}
+			
+			return result;
+		},
+		
+		getSteps: function() {
+			return this.steps;
+		},
+	
+		startsWith: function(other) {
+			var n = other.steps.length;
+			if(n > this.steps.length) {
+				return false;
+			}
+			
+			for(var i = 0; i < n; ++i) {
+				var thisStep = this.steps[i];
+				var otherStep = other.steps[i];
+				
+				//console.log("      ", thisStep, otherStep);
+				if(!thisStep.equals(otherStep)) {
+					return false;
+				}
+			}
+			
+			return true;			
+		},
+		
+		hashCode: function() {
+			return this.toString();
+		},
+		
+		// a equals b = a startsWidth b && a.len = b.len
+		equals: function(other) {
+			var n = this.steps.length;
+			if(n != other.steps.length) {
+				return false;
+			}
+			
+			var result = this.startsWith(other);
+			return result;
+		},
+	
+	
+		// Create a new path with a step appended
+		// TODO Maybe replace with clone().append() - no, because then the path would not be immutable anymore
+		copyAppendStep: function(step) {
+			var newSteps = this.steps.slice(0);
+			newSteps.push(step);
+			
+			var result = new ns.Path(newSteps);
+			
+			return result;
+		},
+		
+		toJson: function() {
+			var result = [];
+			var steps = this.steps;
+			
+			for(var i = 0; i < steps.length; ++i) {
+				var step = steps[i];
+				
+				var stepJson = step.toJson(); 
+				result.push(stepJson);
+			}
+			
+			return result;
+		},
+		
+		/*
+		 * 
+		 * TODO Make result distinct
+		 */
+		getPropertyNames: function() {
+			var result = [];
+			var steps = this.steps;
+			
+			for(var i = 0; i < steps.length; ++i) {
+				var step = steps[i];
+				var propertyName = step.getPropertyName();
+				result.push(propertyName);
+			}
+			
+			return result;
+		}
+	});
+
+	ns.Path.classLabel = 'Path';
+	
+	/**
+	 * Input must be a json array of json for the steps.
+	 * 
+	 */
+	ns.Path.fromJson = function(json) {
+		var steps = [];
+		
+		for(var i = 0; i < json.length; ++i) {
+			var item = json[i];
+			
+			var step = ns.Step.fromJson(item);
+			
+			steps.push(step);
+		}
+		
+		var result = new ns.Path(steps);
+		return result;
+	};
+
+	
+	ns.Path.parse = function(pathStr) {
+		pathStr = _(pathStr).trim();
+		
+		var items = pathStr.length !== 0 ? pathStr.split(" ") : [];		
+		var steps = _.map(items, function(item) {
+			
+			if(item === "<^") {
+				return new ns.StepFacet(-1);
+			} else if(item === "^" || item === ">^") {
+				return new ns.StepFacet(1);
+			} else {
+				return ns.Step.parse(item);
+			}
+		});
+		
+		//console.log("Steps for pathStr " + pathStr + " is ", steps);
+		
+		var result = new ns.Path(steps);
+		
+		return result;
+	};
+	
+
+	// @Deprecated - Do not use anymore
+	ns.Path.fromString = ns.Path.parse;
+	
+})();
+(function() {
+	
+	var sparql = Jassa.sparql;
+	
+	var ns = Jassa.facete;
+
+	
+	/**
+	 * Returns a new array of those triples, that are directly part of the given array of elements.
+	 * 
+	 */
+	ns.getElementsDirectTriples = function(elements) {
+		var result = [];
+		for(var i = 0; i < elements.length; ++i) {
+			var element = elements[i];
+			if(element instanceof sparql.ElementTriplesBlock) {
+				result.push.apply(result, element.triples);
+			}
+		}
+		
+		return result;
+	};
+	
+	
+	/**
+	 * Combines the elements of two concepts, yielding a new concept.
+	 * The new concept used the variable of the second argument.
+	 * 
+	 */
+	ns.ConceptUtils = {
+		createCombinedConcept: function(baseConcept, tmpConcept) {
+			// TODO The variables of baseConcept and tmpConcept must match!!!
+			// Right now we just assume that.
+			
+			
+			// Check if the concept of the facetFacadeNode is empty
+			var tmpElements = tmpConcept.getElements();
+			var baseElement = baseConcept.getElement();
+			
+			// Small workaround (hack) with constraints on empty paths:
+			// In this case, the tmpConcept only provides filters but
+			// no triples, so we have to include the base concept
+			var hasTriplesTmp = tmpConcept.hasTriples();
+			
+			var e;
+			if(tmpElements.length > 0) {
+	
+				if(hasTriplesTmp && baseConcept.isSubjectConcept()) {
+					e = tmpConcept.getElement();
+				} else {
+					var baseElements = baseConcept.getElements();
+	
+					var newElements = [];
+					newElements.push.apply(newElements, baseElements);
+					newElements.push.apply(newElements, tmpElements);
+					
+					e = new sparql.ElementGroup(newElements);
+				}
+			} else {
+				e = baseElement;
+			}
+			
+			
+			var concept = new facets.ConceptInt(e, tmpConcept.getVariable());
+	
+			return concept;
+		},
+		
+		createSubjectConcept: function(subjectVar) {
+			
+			//var s = sparql.Node.v("s");
+			var s = subjectVar;
+			var p = sparql.Node.v("_p_");
+			var o = sparql.Node.v("_o_");
+			
+			var conceptElement = new sparql.ElementTriplesBlock([new rdf.Triple(s, p, o)]);
+
+			//pathManager = new facets.PathManager(s.value);
+			
+			result = new facete.Concept(conceptElement, s);
+
+			return result;
+		},
+		
+		
+		/**
+		 * Creates a query based on the concept
+		 * TODO: Maybe this should be part of a static util class?
+		 */
+		createQueryList: function(concept) {
+			var result = new sparql.Query();
+			result.setDistinct(true);
+			
+			result.getProjectVars().add(concept.getVar());
+			var resultElements = result.getElements();
+			var conceptElements = concept.getElements();
+
+			resultElements.push.apply(resultElements, conceptElements);
+			
+			return result;
+		},
+
+		createQueryCount: function(concept, outputVar) {
+			var result = new sparql.Query();
+			
+			result.getProjectVars().add(outputVar, new sparql.E_Count(concept.getVar(), true));
+
+			var resultElements = result.getElements();
+			var conceptElements = concept.getElements();
+			resultElements.push.apply(resultElements, conceptElements)
+ 
+			return result;			
+		}
+	};
+
+	
+
+	/**
+	 * A class for holding information which variable
+	 * of an element corresponds to the property and
+	 * which to the 
+	 * 
+	 * ({?s ?p ?o}, ?p, ?o)
+	 * 
+	 * 
+	 */
+	ns.FacetConcept = Class.create({
+		initialize: function(elements, facetVar, facetValueVar) {
+			this.elements = elements;
+			this.facetVar = facetVar;
+			this.facetValueVar = facetValueVar;
+		},
+		
+		getElements: function() {
+			return this.elements;
+		},
+		
+		getFacetVar: function() {
+			return this.facetVar;
+		},
+		
+		getFacetValueVar: function() {
+			return this.facetValueVar;
+		},
+		
+		toString: function() {
+			var result = "FacetConcept: ({" + this.elements.join(", ") + "}, " + this.facetVar + ", " + this.facetValueVar + ")";
+			return result;
+		}
+	});
+
+
+	/**
+	 * A concept is pair comprised of a sparql graph
+	 * pattern (referred to as element) and a variable.
+	 * 
+	 */
+	ns.Concept = Class.create({
+		
+		classLabel: 'Concept',
+		
+		initialize: function(element, variable) {
+			this.element = element;
+			this.variable = variable;
+		},
+		
+		toJson: function() {
+			var result = {
+					element: JSON.parse(JSON.stringify(this.element)),
+					variable: this.variable
+			};
+			
+			return result;
+		},
+		
+		getElement: function() {
+			return this.element;
+		},
+		
+		hasTriples: function() {
+			var elements = this.getElements();
+			var triples = ns.getElementsDirectTriples(elements);
+			var result = triples.length > 0;
+			
+			return result;
+		},
+		
+		/**
+		 * Convenience method to get the elements as an array.
+		 * Resolves sparql.ElementGroup
+		 * 
+		 */
+		getElements: function() {
+			var result;
+			
+			if(this.element instanceof sparql.ElementGroup) {
+				result = this.element.elements;
+			} else {
+				result = [ this.element ];
+			}
+			
+			return result;
+		},
+
+		getVar: function() {
+			return this.variable;				
+		},
+		
+		getVariable: function() {
+			
+			if(!this.warningShown) {				
+				//console.log('[WARN] Deprecated. Use .getVar() instead');
+				this.warningShown = true;
+			}
+			
+			return this.getVar();
+		},
+		
+		toString: function() {
+			return "" + this.element + "; " +  this.variable;
+		},
+		
+		// Whether this concept is isomorph to (?s ?p ?o, ?s)
+		isSubjectConcept: function() {
+			var result = false;
+			
+			var v = this.variable;
+			var e = this.element;
+			
+			if(e instanceof sparql.ElementTriplesBlock) {
+				var ts = e.triples;
+				
+				if(ts.length === 1) {
+					var t = ts[0];
+					
+					var s = t.getSubject();
+					var p = t.getProperty();
+					var o = t.getObject();
+					
+					result = v.equals(s) && p.isVariable() && o.isVariable();
+				}
+			}
+
+			
+			return result;
+		},
+
+		combineWith: function(that) {
+			var result = ns.createCombinedConcept(this, that);
+			return result;
+		},
+		
+		createOptimizedConcept: function() {
+			var element = this.getElement();
+			var newElement = element.flatten();
+			
+			var result = new ns.ConceptInt(newElement, this.variable);
+
+			return result;
+		},
+		
+
+		
+		/**
+		 * Remove unnecessary triple patterns from the element:
+		 * Example:
+		 * ?s ?p ?o
+		 * ?s a :Person
+		 *  
+		 *  We can remove ?s ?p ?o, as it does not constraint the concepts extension.
+		 */
+		getOptimizedElement: function() {
+
+			/* This would become a rather complex function, the method isSubjectConcept is sufficient for our use case */
+			
+			
+		}
+	});
+
+
+	//ns.Concept.classLabel = 'Concept';
+
+
+	/**
+	 * Array version constructor
+	 * 
+	 */
+	ns.Concept.createFromElements = function(elements, variable) {
+		var element;
+		if(elements.length == 1) {
+			element = elements[0];
+		} else {
+			element = new sparql.ElementGroup(elements);
+		}
+		
+		var result = new ns.Concept(element, variable);
+		
+		return result;
+	};
+
+	
+})();
+
+(function() {
+
+	var ns = Jassa.facete;
+
+	ns.ConceptFactory = Class.create({
+		createConcept: function() {
+			throw "not overridden";
+		}
+	});
+
+
+	ns.ConceptFactoryConst = Class.create(ns.ConceptFactory, {
+		initialize: function(concept) {
+			this.concept = concept;
+		},
+		
+		getConcept: function() {
+			return this.concept;
+		},
+		
+		setConcept: function(concept) {
+			this.concept = concept;
+		},
+		
+		createConcept: function() {
+			return this.concept;
+		}
+	});
+
+})();(function() {
+	
+	var ns = Jassa.facete;
+	
+	ns.FacetNodeFactory = Class.create({
+		createFacetNode: function() {
+			throw "Override me";
+		}
+	});
+	
+	
+	ns.FacetNodeFactoryConst = Class.create(ns.FacetNodeFactory, {
+		initialize: function(facetNode) {
+			this.facetNode = facetNode;
+		},
+
+		createFacetNode: function() {
+			return this.facetNode;
+		}
+	});
+	
+})();(function() {
+	
+	var ns = Jassa.facete;
+
+	ns.QueryFactory = Class.create({
+		createQuery: function() {
+			throw "Not overridden";
+		}
+	});
+
+
+	/**
+	 * A query factory that injects facet constraints into an arbitrary query returned by
+	 * a subQueryFactory.
+	 * 
+	 * 
+	 * 
+	 */
+	ns.QueryFactoryFacets = Class.create(ns.QueryFactory, {
+		initialize: function(subQueryFactory, rootFacetNode, constraintManager) {
+			this.subQueryFactory = subQueryFactory;
+			this.rootFacetNode = rootFacetNode;
+			this.constraintManager = constraintManager ? constraintManager : new ns.ConstraintManager();
+		},
+	
+		getRootFacetNode: function() {
+			return this.rootFacetNode;
+		},
+			
+		getConstraintManager: function() {
+			return this.constraintManager;
+		},
+			
+		createQuery: function() {
+			var query = this.subQueryFactory.createQuery();
+
+			if(query == null) {
+				return null;
+			}
+			
+			//var varsMentioned = query.getVarsMentioned();
+			var varsMentioned = query.getProjectVars().getVarList();
+			
+
+			var varNames = _.map(varsMentioned, function(v) {
+				return v.value;
+			});
+			
+			
+			var elements = this.constraintManager.createElements(this.rootFacetNode);
+			query.elements.push.apply(query.elements, elements);
+			
+			return query;
+		}	
+	});
+
+
+	ns.QueryFactoryFacets.create = function(subQueryFactory, rootVarName, generator) {
+		generator = generator ? generator : new facets.GenSym("fv");
+		var rootFacetNode = facets.FacetNode.createRoot(rootVarName, generator);
+		
+		var result = new ns.QueryFactoryFacets(subQueryFactory, rootFacetNode);
+
+		return result;
+	};
+
+	
+	
+//	ns.ConstraintNode = function(facetNode, parent) {
+//		this.facetNode = facetNode;
+//		this.parent = parent;
+//		
+//		this.idToConstraint = {};
+//	};
+//
+
+//	ns.SparqlDataflow = function(query, fnPostProcessor) {
+//		this.query = query;
+//		this.fnPostProcessor = fnPostProcessor;
+//	};
+//	
+//	ns.SparqlDataflow.prototype = {
+//		createDataProvider: function(sparqlServer) {
+//
+//			var executor = new facets.ExecutorQuery(sparqlService, query);
+//			var result = new DataProvider(executor);
+//			
+//			// TODO Attach the postProcessing workflow
+//			
+//			return result;
+//		}
+//	};	
+	
+//	ns.ElementDesc = Class.create({
+//		initialize: function(element, focusVar, facetVar) {
+//			this.element = element;
+//			this.focusVar = focusVar;
+//			this.facetVar = facetVar;
+//		},
+//
+//		createConcept: function() {
+//			var result = new facets.ConceptInt(this.element, this.facetVar);
+//			return result;
+//		},
+//		
+//		createQueryFacetValueCounts: function() {
+//			var element = this.element;
+//			
+//			var focusVar = this.focusVar;
+//			var facetVar = this.facetVar;
+//
+//			var sampleLimit = null;
+//							
+//			countVar = countVar ? countVar : sparql.Node.v("__c");
+//			var result = queryUtils.createQueryCount(element, sampleLimit, focusVar, countVar, [facetVar], options);
+//			
+//			return result;
+//		},
+//		
+//		createQueryFacetValues: function() {
+//			var element = this.element;
+//							
+//			var focusVar = this.focusVar;
+//			var facetVar = this.facetVar;
+//
+//			var sampleLimit = null;
+//			
+//			countVar = countVar ? countVar : sparql.Node.v("__c");
+//			var result = queryUtils.createQueryCountDistinct(element, sampleLimit, focusVar, countVar, [facetVar], options);
+//
+//			return result;
+//		}
+//	});
+	
+	
+})();
+(function() {
+	
+	var ns = Jassa.facete;
+	
+	/**
+	 * ConstraintSpecs can be arbitrary objects, however they need to expose the
+	 * declared paths that they affect.
+	 * DeclaredPaths are the ones part of spec, affectedPaths are those after considering the constraint's sparql element. 
+	 * 
+	 */
+	ns.ConstraintSpec = Class.create({
+		getName: function() {
+			throw "Override me";
+		},
+		
+		getDeclaredPaths: function() {
+			throw "Override me";
+		}
+	});
+	
+
+	/**
+	 * The class of constraint specs that are only based on exactly one path.
+	 * 
+	 * Offers the method getDeclaredPath() (must not return null)
+	 * Do not confuse with getDeclaredPaths() which returns the path as an array
+	 * 
+	 */
+	ns.ConstraintSpecSinglePath = Class.create(ns.ConstraintSpec, {
+		initialize: function(name, path) {
+			this.name = name;
+			this.path = path;
+		},
+		
+		getName: function() {
+			return this.name;
+		},
+		
+		getDeclaredPaths: function() {
+			return [this.path];
+		},
+		
+		getDeclaredPath: function() {
+			return this.path;
+		}
+	});
+
+
+	ns.ConstraintSpecPath = Class.create(ns.ConstraintSpecSinglePath, {
+		initialize: function($super, name, path) {
+			$super(name, path);
+		}
+	});
+	
+	ns.ConstraintSpecPathValue = Class.create(ns.ConstraintSpecSinglePath, {
+		initialize: function($super, name, path, value) {
+			$super(name, path);
+			this.value = value;
+		},
+
+		getValue: function() {
+			return this.value;
+		}
+	});
+	
+	
+	/**
+	 * Not used yet; its only here as an idea.
+	 * 
+	 * A specification based on a sparql expression.
+	 * The variables of this expression can be either mapped to paths or to values.  
+	 * 
+	 * These mappings must be disjoint.
+	 * 
+	 */
+	ns.ConstraintSpecExpr = Class.create(ns.ConstraintSpec, {
+		/**
+		 * expr: sparql.Expr
+		 * varToPath: util.Map<Var, Path>
+		 * varToNode: sparql.Binding
+		 */
+		initialize: function(expr, varToPath, varToNode) {
+			this.expr = expr;
+			this.varToPath = varToPath;
+			this.varToNode = varToNode;
+		},
+		
+		getPaths: function() {
+			// extract the paths from varToPath
+		}
+	});
+	
+//	ns.ConstraintSpecBBox = Class.create(ns.ConstraintSpecSinglePath, {
+//		
+//	});
+	
+	
+	
+})();
+
+(function() {
+	
+	var vocab = Jassa.vocab;
+	
+	var ns = Jassa.facete;
+
+	
+	
+	// The three basic constraint types: mustExist, equals, and range.
+	// Futhermore: bbox (multiple implementations possible, such as lat long or wktLiteral based)
+	
+	ns.ConstraintElementFactory = Class.create({
+		createElementsAndExprs: function(rootFacetNode, constraintSpec) {
+			throw "Override me";
+		}
+	});
+
+	
+//	ns.ConstraintElementFactoryTriplesBase = Class.create(ns.ConstraintElementFactory, {
+//		createElementsAndExprs: function() {
+//			
+//		},
+//		
+//		createTriplesAndExprs: function() {
+//			throw "Override me";
+//		}
+//	});
+	
+
+	ns.ConstraintElementFactoryExist = Class.create(ns.ConstraintElementFactory, {
+		createElementsAndExprs: function(rootFacetNode, constraintSpec) {
+			var facetNode = rootFacetNode.forPath(constraintSpec.getDeclaredPath());
+			var elements = [new sparql.ElementTriplesBlock(facetNode.getTriples())];		
+			var triplesAndExprs = new ns.ElementsAndExprs(elements, []);
+			
+			return result;
+		}
+	});
+	
+	
+	/**
+	 * constraintSpec.getValue() must return an instance of sparql.NodeValue
+	 * 
+	 */
+	ns.ConstraintElementFactoryEqual = Class.create(ns.ConstraintElementFactory, {
+		createElementsAndExprs: function(rootFacetNode, constraintSpec) {
+			var facetNode = rootFacetNode.forPath(constraintSpec.getDeclaredPath());
+
+			var pathVar = facetNode.getVar();
+			var exprVar = new sparql.ExprVar(pathVar);
+			
+			var elements = [new sparql.ElementTriplesBlock(facetNode.getTriples())];		
+			var exprs = [new sparql.E_Equals(exprVar, constraintSpec.getValue())]; //sparql.NodeValue.makeNode(constraintSpec.getValue()))];
+			
+			var result = new ns.ElementsAndExprs(elements, exprs);
+			
+			//console.log('constraintSpec.getValue() ', constraintSpec.getValue());
+			return result;
+		}
+	});
+	
+	
+//	ns.ConstraintElementSparqlExpr = Class.create(ns.ConstraintElementFactory, {
+//		createElement: function(rootFacetNode, constraintSpec) {
+//			
+//		}
+//	});
+
+
+	ns.ConstraintElementFactoryBBoxRange = Class.create(ns.ConstraintElementFactory, {
+		initialize: function() {
+			this.stepX = new facete.Step(vocab.wgs84.str.lon);
+			this.stepY = new facete.Step(vocab.wgs84.str.la);
+		},
+		
+		createElementsAndExprs: function(rootFacetNode, spec) {
+			var facetNode = rootFacetNode.forPath(spec.getPath());
+			var bounds = spec.getValue();
+			
+			var fnX = facetNode.forStep(this.stepX);
+			var fnY = facetNode.forStep(this.stepY);
+
+			var triplesX = fnX.getTriples();		
+			var triplesY = fnY.getTriples();
+			
+			var triples = sparql.util.mergeTriples(triplesX, triplesY);
+			
+			//var element = new sparql.ElementTriplesBlock(triples);
+			
+			// Create the filter
+			var varX = fnX.getVar();
+			var varY = fnY.getVar();
+			
+			var expr = ns.createWgsFilter(vX, vY, this.bounds, xsd.xdouble);
+			
+			var elements = [new sparql.ElementTriplesBlock(triples)];
+			var exprs = [expr];
+			
+			// Create the result
+			var result = new ns.ElementsAndExprs(elements, exprs);
+	
+			return result;
+		}		
+	});
+	
+	
+
+	/**
+	 * constraintManager.addConstraint(new ConstraintBBox(path, bounds))
+	 */	
+//	ns.ConstraintBBox = Class.create(ns.PathExpr, {
+//		initialize: function(path, bounds) {
+//			
+//		}
+//	});
+//	
+//	
+//	ns.ConstraintSparqlTransformer = Class.create({
+//		
+//	});
+//	
+	
+	
+	/*
+	 * Wgs84 
+	 */
+		
+	// TODO Should there be only a breadcrumb to the resource that carries lat/long
+	// Or should there be two breadcrumbs to lat/long directly???
+//	ns.PathConstraintWgs84 = function(pathX, pathY, bounds) {
+//		this.pathX = pathX;
+//		this.pathY = pathY;
+//		this.bounds = bounds;
+//
+//		//this.long = "http://www.w3.org/2003/01/geo/wgs84_pos#long";
+//		//this.lat = "http://www.w3.org/2003/01/geo/wgs84_pos#lat";
+//	};
+//	
+//	
+//	/**
+//	 * This is a factory for arbitrary bbox constraints at a preset path.
+//	 * 
+//	 * @param path
+//	 * @returns {ns.ConstraintWgs84.Factory}
+//	 */
+//	ns.PathConstraintWgs84.Factory = function(path, pathX, pathY) {
+//		this.path = path;
+//		this.pathX = pathX;
+//		this.pathY = pathY;
+//	};
+//	
+//	ns.PathConstraintWgs84.Factory.create = function(path) {
+//		path = path ? path : new facets.Path();
+//		
+//		var pathX = path.copyAppendStep(new facets.Step(geo.lon.value)); //new ns.Breadcrumb.fromString(breadcrumb.pathManager, breadcrumb.toString() + " " + geo.long.value);
+//		var pathY = path.copyAppendStep(new facets.Step(geo.lat.value)); ///new ns.Breadcrumb.fromString(breadcrumb.pathManager, breadcrumb.toString() + " " + geo.lat.value);
+//
+//		var result = new ns.PathConstraintWgs84.Factory(path, pathX, pathY);
+//		return result;
+//	};
+//	
+//	ns.PathConstraintWgs84.Factory.prototype = {
+//		getPath: function() {
+//			return this.path;
+//		},
+//	
+//		/**
+//		 * Note: bounds may be null
+//		 */
+//		createConstraint: function(bounds) {
+//			return new ns.PathConstraintWgs84(this.pathX, this.pathY, bounds);
+//		}
+//	
+//
+////		getTriples: function(pathManager) {
+////			var breadcrumbX = new facets.Breadcrumb(pathManager, this.pathX); 
+////			var breadcrumbY = new facets.Breadcrumb(pathManager, this.pathY);
+////			
+////			var triplesX = breadcrumbX.getTriples();		
+////			var triplesY = breadcrumbY.getTriples();
+////			
+////			var result = sparql.mergeTriples(triplesX, triplesY);
+////			
+////			return result;		
+////		}
+//	};
+//
+//	
+//	ns.PathConstraintWgs84.prototype = {
+//		createConstraintElementNewButNotUsedYet: function(breadcrumb) {
+//			var path = breadcrumb.getPath();
+//			
+//			var pathX = path.copyAppendStep(new facets.Step(geo.lon.value));
+//			var pathY = path.copyAppendStep(new facets.Step(geo.lat.value));
+//	
+//			// Create breadcrumbs
+//			var breadcrumbX = new facets.Breadcrumb(pathManager, pathX); 
+//			var breadcrumbY = new facets.Breadcrumb(pathManager, pathY);
+//	
+//			// Create the graph pattern
+//			var triplesX = breadcrumbX.getTriples();		
+//			var triplesY = breadcrumbY.getTriples();
+//			
+//			var triples = sparql.mergeTriples(triplesX, triplesY);
+//			
+//			//var element = new sparql.ElementTriplesBlock(triples);
+//			
+//			// Create the filter
+//			var vX = breadcrumbX.getTargetVariable();
+//			var vY = breadcrumbY.getTargetVariable();
+//			
+//			var expr = ns.createWgsFilter(vX, vY, this.bounds, xsd.xdouble);
+//	
+//			// Create the result
+//			var result = new ns.ConstraintElement(triples, expr);
+//	
+//			return result;
+//		},
+//
+//		getPath: function() {
+//			return this.path;
+//		},
+//		
+//		createElements: function(facetNode) {
+//			var result = [];
+//
+//			// Create breadcrumbs
+//			var facetNodeX = facetNode.forPath(this.pathX); 
+//			var facetNodeY = facetNode.forPath(this.pathY);
+//	
+//			// Create the graph pattern
+//			var triplesX = facetNodeX.getTriples();		
+//			var triplesY = facetNodeY.getTriples();
+//			
+//			var triples = sparql.mergeTriples(triplesX, triplesY);
+//
+//			result.push(new sparql.ElementTriplesBlock(triples));
+//			
+//			if(!this.bounds) {
+//				return result;
+//			}
+//			
+//			//var element = new sparql.ElementTriplesBlock(triples);
+//			
+//			// Create the filter
+//			var vX = facetNodeX.getVar();
+//			var vY = facetNodeY.getVar();
+//			
+//			var expr = ns.createWgsFilter(vX, vY, this.bounds, xsd.xdouble);
+//	
+//			result.push(new sparql.ElementFilter([expr]));
+//			
+//			// Create the result
+//			//var result = new ns.ConstraintElement(triples, expr);
+//			return result;
+//		}
+//
+////		createConstraintElement: function(pathManager) {
+////			// Create breadcrumbs
+////			var breadcrumbX = new facets.Breadcrumb(pathManager, this.pathX); 
+////			var breadcrumbY = new facets.Breadcrumb(pathManager, this.pathY);
+////	
+////			// Create the graph pattern
+////			var triplesX = breadcrumbX.getTriples();		
+////			var triplesY = breadcrumbY.getTriples();
+////			
+////			var triples = sparql.mergeTriples(triplesX, triplesY);
+////			
+////			//var element = new sparql.ElementTriplesBlock(triples);
+////			
+////			// Create the filter
+////			var vX = breadcrumbX.getTargetVariable();
+////			var vY = breadcrumbY.getTargetVariable();
+////			
+////			var expr = ns.createWgsFilter(vX, vY, this.bounds, xsd.xdouble);
+////	
+////			// Create the result
+////			var result = new ns.ConstraintElement(triples, expr);
+////			return result;
+////		}
+//	};
+//
+	
+})();(function() {
+	
+	var sparql = Jassa.sparql;
+	
+	var ns = Jassa.facete;
+	
+	
+	ns.ElementsAndExprs = Class.create({
+		initialize: function(elements, exprs) {
+			this.elements = elements;
+			this.exprs = exprs;
+		},
+		
+		getElements: function() {
+			return this.elements;
+		},
+		
+		getExprs: function() {
+			return this.exprs;
+		}
+	});
+
+	
+	/**
+	 * @Deprecated in favor of the more generic ElementsAndExprs
+	 * 
+	 * A class that - as the name states - combines triples and exprs.
+	 *
+	 *
+	 *
+	 * Additionally provides a createElements to turn its state into an array of sparql elements.
+	 * 
+	 */
+//	ns.TriplesAndExprs = Class.create({
+//		initialize: function(triples, exprs) {
+//			this.triples = triples;
+//			this.exprs = exprs;
+//		},
+//		
+//		getTriples: function() {
+//			return this.triples;
+//		},
+//		
+//		getExprs: function() {
+//			return this.exprs;
+//		},
+//		
+//		createElements: function() {
+//			var triples = this.triples;
+//			var exprs = this.exprs;
+//
+//			var result = [];
+//
+//			if(triples && triples.length > 0) {
+//				result.push(new sparql.ElementTriplesBlock(triples));
+//			}
+//			
+//			if(exprs && exprs.length > 0) {
+//				result.push(new sparql.ElementFilter(exprs))
+//				/*
+//				var filters = _(exprs).map(function(expr) {
+//					return new sparql.ElementFilter(expr);
+//				});
+//				*/
+//			}
+//			
+//			return result;
+//		}
+//	});
+	
+	
+})();(function() {
+
+	var util = Jassa.util;
+	
+	var ns = Jassa.facete;
+	
+	
+	ns.createDefaultConstraintElementFactories = function() {
+		var result = new util.ObjectMap();
+	
+		result.put("exist", new facete.ConstraintElementFactoryExist());
+		result.put("equal", new facete.ConstraintElementFactoryEqual());
+		//registry.put("range", new facete.ConstaintElementFactoryRange());		
+		result.put("bbox", new facete.ConstraintElementFactoryBBoxRange());
+
+		
+		return result;
+	};
+	
+
+	
+	/**
+	 * A constraint manager is a container for ConstraintSpec objects.
+	 * 
+	 * @param cefRegistry A Map<String, ConstraintElementFactory>
+	 */
+	ns.ConstraintManager = Class.create({
+		initialize: function(cefRegistry) {
+			
+			if(!cefRegistry) {
+				cefRegistry = ns.createDefaultConstraintElementFactories(); 
+			}
+			
+			this.cefRegistry = cefRegistry;
+			this.constraints = [];
+		},
+		
+		getCefRegistry: function() {
+			return this.cefRegistry;
+		},
+		
+		/**
+		 * Yields all constraints having at least one
+		 * variable bound to the exact path
+		 * 
+		 * Note: In general, a constraint may make use of multiple paths
+		 */
+		getConstraintsByPath: function(path) {
+			var result = [];
+			
+			var constraints = this.constraints;
+			
+			for(var i = 0; i < constraints.length; ++i) {
+				var constraints = constraints[i];
+				
+				var paths = constraint.getDeclaredPaths();
+				
+				var isPath = _.some(paths, function(p) {
+					var tmp = p.equals(path);
+					return tmp;
+				});
+				
+				if(isPath) {
+					result.push(constraint);
+				}
+			}
+			
+			return result;
+		},
+		
+
+		getConstrainedSteps: function(path) {
+			//console.log("getConstrainedSteps: ", path);
+			//checkNotNull(path);
+			
+			var tmp = [];
+			
+			var steps = path.getSteps();
+			var constraints = this.constraints;
+			
+			for(var i = 0; i < constraints.length; ++i) {
+				var constraint = constraints[i];
+				//console.log("  Constraint: " + constraint);
+
+				var paths = constraint.getDeclaredPaths();
+				//console.log("    Paths: " + paths.length + " - " + paths);
+				
+				for(var j = 0; j < paths.length; ++j) {
+					var p = paths[j];
+					var pSteps = p.getSteps();
+					var delta = pSteps.length - steps.length; 
+					
+					//console.log("      Compare: " + delta, p, path);
+					
+					var startsWith = p.startsWith(path);
+					//console.log("      Startswith: " + startsWith);
+					if(delta == 1 && startsWith) {
+						var step = pSteps[pSteps.length - 1];
+						tmp.push(step);
+					}
+				}
+			}
+			
+			var result = _.uniq(tmp, function(step) { return "" + step; });
+			
+			//console.log("Constraint result", constraints.length, result.length);
+			
+			return result;
+		},
+			
+		addConstraint: function(constraint) {
+			this.constraints.push(constraint);
+		},
+		
+		removeConstraint: function() {
+			// TODO implement
+		},
+		
+//		createElement: function(facetNode, excludePath) {
+//			console.log("Should not be invoked");
+//			
+//			var elements = this.createElements(facetNode, excludePath);
+//			var result;
+//			if(elements.length === 1) {
+//				result = elements[0];
+//			} else {
+//				result = new sparql.ElementGroup(elements);
+//			}
+//			
+//			return result;
+//		},
+		
+		createElements: function(facetNode, excludePath) {
+			//var triples = [];
+			var elements = [];
+			
+			
+			var pathToExprs = {};
+			
+			var self = this;
+
+			_.each(this.constraints, function(constraint) {
+				var paths = constraint.getDeclaredPaths();
+				
+				var pathId = _.reduce(
+						paths,
+						function(memo, path) {
+							return memo + " " + path;
+						},
+						""
+				);
+
+				// Check if any of the paths is excluded
+				if(excludePath) {
+					var skip = _.some(paths, function(path) {
+						//console.log("Path.equals", excludePath, path);
+						
+						var tmp = excludePath.equals(path);
+						return tmp;
+					});
+
+					if(skip) {
+						return;
+					}
+				}
+				
+				
+				_.each(paths, function(path) {
+					
+					//if(path.equals(excludePath)) {
+						// TODO Exclude only works if there is only a single path
+						// Or more generally, if all paths were excluded...
+						// At least that somehow seems to make sense
+					//}
+					
+					var fn = facetNode.forPath(path);
+					
+					//console.log("FNSTATE", fn);
+					
+					var tmpElements = fn.getElements();
+					elements.push.apply(elements, tmpElements);
+				});
+				
+				var constraintName = constraint.getName();
+				var cef = self.cefRegistry.get(constraintName);
+				if(!cef) {
+					throw "No constraintElementFactory registered for " + constraintName;
+				}
+				
+				var ci = cef.createElementsAndExprs(facetNode, constraint);
+				
+				//var ci = constraint.instanciate(facetNode);
+				var ciElements = ci.getElements();
+				var ciExprs = ci.getExprs();
+				
+				if(ciElements) {
+					elements.push.apply(elements, ciElements);
+				}				
+				
+				if(ciExprs && ciExprs.length > 0) {
+				
+					var exprs = pathToExprs[pathId];
+					if(!exprs) {
+						exprs = [];
+						pathToExprs[pathId] = exprs;
+					}
+					
+					var andExpr = sparql.andify(ciExprs);
+					exprs.push(andExpr);
+				}				
+			});
+
+			_.each(pathToExprs, function(exprs) {
+				var orExpr = sparql.orify(exprs);
+				var element = new sparql.ElementFilter([orExpr]);
+
+				//console.log("andExprs" +  element);
+
+				elements.push(element);
+			});
+
+			//console.log("pathToExprs", pathToExprs);
+
+			//console.log("[ConstraintManager::createElements]", elements);
+			
+			return elements;
+		}
+		
+	});
+
+})();
+
+
+
+/**
+ * An expressions whose variables are expressed in terms
+ * of paths.
+ * 
+ * TODO What if we constrained a geo resource to a bounding box?
+ * If the instance function accepted a facet node,
+ * then a constraint could use it to create new triples (e.g. geoResource lat/long ?var)
+ * 
+ * On the other hand, as this essentially places constraints at
+ * different paths (i.e. range constraints on lat/long paths),
+ * so actually, we could expand this constraints to sub-constraints,
+ * resulting in a hierarchy of constraints, and also resulting
+ * in another layer of complexity...
+ * 
+ * 
+ * 
+ * 
+ * Constraint.intstanciate(facetNode
+ * 
+ * 
+ * @param expr
+ * @param varToPath
+ * @returns {ns.Constraint}
+ */
+//ns.ConstraintExpr = Class.create({
+//	initialize: function(expr, varToPath)  {
+//		this.expr = expr;
+//		this.varToPath = varToPath;
+//	},
+//
+//	/*
+//	 * Get the paths used by this expression
+//	 */
+//	getPaths: function() {
+//		var result = _.values(this.varToPath);
+//		return result;
+//	},
+//		
+//	getId: function() {
+//		
+//	},
+//	
+//	toString: function() {
+//		return this.getId();
+//	},
+//	
+//	/**
+//	 * Returns an array of elements.
+//	 * 
+//	 * Change: It now returns an element and a set of expressions.
+//	 * The expressions get ORed when on the same path
+//	 * 
+//	 * Replaces the variables in the expressions
+//	 * with those for the paths.
+//	 * 
+//	 * 
+//	 * Usually the facetNode should be the root node.
+//	 * 
+//	 * @param varNode
+//	 */
+//	instanciate: function(facetNode) {
+//		var varMap = {};
+//		
+//		_.each(this.varToPath, function(path, varName) {
+//			var targetFacetNode = facetNode.forPath(path);
+//			var v = targetFacetNode.getVariable();
+//			varMap[varName] = v;
+//		});
+//		
+//		var fnSubstitute = function(node) {
+//			//console.log("Node is", node);
+//			if(node.isVar()) {
+//				var varName = node.getValue();
+//				var v = varMap[varName];
+//				if(v) {
+//					return v;
+//				}
+//			}
+//			return node;
+//		};
+//		
+//		//console.log("Substituting in ", this.expr);
+//		var tmpExpr = this.expr.copySubstitute(fnSubstitute);
+//		
+//		var result = {
+//				elements: [], //element],
+//				exprs: [tmpExpr]
+//		};
+//		
+//		/*
+//		var result = [element];
+//		*/
+//		
+//		return result;
+//		//substitute
+//	}
+//});
+(function() {
+
+	var sparql = Jassa.sparql;
+	
+	var ns = Jassa.facete;
+
+
+	/**
+	 * A class for generating variables for step-ids.
+	 * So this class does not care about the concrete step taken.
+	 * 
+	 * @param variableName
+	 * @param generator
+	 * @param parent
+	 * @param root
+	 * @returns {ns.VarNode}
+	 */
+	ns.VarNode = Class.create({
+		initialize: function(variableName, generator, stepId, parent, root) {
+			this.variableName = variableName;
+			this.generator = generator;
+			this.stepId = stepId; // Null for root
+			this.parent = parent;
+			this.root = root;
+			
+			
+			//console.log("VarNode status" , this);
+			if(!this.root) {
+				if(this.parent) {
+					this.root = parent.root;
+				}
+				else {
+					this.root = this;
+				}
+			}
+	
+			
+			this.idToChild = {};
+		},
+
+		isRoot: function() {
+			var result = this.parent ? false : true;
+			return result;
+		},
+
+		/*
+		getSourceVarName: function() {
+			var result = this.root.variableName;
+			return result;
+		},
+		*/
+		
+		getVariableName: function() {
+			return this.variableName;
+		},
+		
+		/*
+		forPath: function(path) {
+			var steps = path.getSteps();
+			
+			var result;
+			if(steps.length === 0) {
+				result = this;
+			} else {
+				var step = steps[0];
+				
+				// TODO Allow steps back
+				
+				result = forStep(step);
+			}
+			
+			return result;
+		},
+		*/
+
+		getIdStr: function() {
+			var tmp = this.parent ? this.parent.getIdStr() : "";
+			
+			var result = tmp + this.variableName;
+			return result;
+		},
+
+		getStepId: function(step) {
+			return "" + JSON.stringify(step);
+		},
+		
+		getSteps: function() {
+			return this.steps;
+		},
+			
+		/**
+		 * Convenience method, uses forStep
+		 * 
+		 * @param propertyUri
+		 * @param isInverse
+		 * @returns
+		 */
+		forProperty: function(propertyUri, isInverse) {
+			var step = new ns.Step(propertyUri, isInverse);
+			
+			var result = this.forStep(step);
+
+			return result;
+		},
+
+		forStepId: function(stepId) {
+			var child = this.idToChild[stepId];
+			
+			if(!child) {
+				
+				var subName = this.generator.next();
+				child = new ns.VarNode(subName, this.generator, stepId, this);
+				
+				//Unless we change something
+				// we do not add the node to the parent
+				this.idToChild[stepId] = child;				
+			}
+			
+			return child;
+		},
+		
+		/*
+		 * Recursively scans the tree, returning the first node
+		 * whose varName matches. Null if none found.
+		 * 
+		 * TODO: Somehow cache the variable -> node mapping 
+		 */
+		findNodeByVarName: function(varName) {
+			if(this.variableName === varName) {
+				return this;
+			}
+			
+			var children = _.values(this.idToChild);
+			for(var i = 0; i < children.length; ++i) {
+				var child = children[i];
+
+				var tmp = child.findNodeByVarName(varName);
+				if(tmp) {
+					return tmp;
+				}
+			}
+			
+			return null;
+		}
+	});
+
+	
+	/**
+	 * This class only has the purpose of allocating variables
+	 * and generating elements.
+	 * 
+	 * The purpose is NOT TO DECIDE on which elements should be created.
+	 * 
+	 * 
+	 * @param parent
+	 * @param root
+	 * @param generator
+	 * @returns {ns.FacetNode}
+	 */
+	ns.FacetNode = Class.create({
+		initialize: function(varNode, step, parent, root) {
+			this.parent = parent;
+			this.root = root;
+			if(!this.root) {
+				if(this.parent) {
+					this.root = parent.root;
+				}
+				else {
+					this.root = this;
+				}
+			}
+	
+			
+			this.varNode = varNode;
+			
+			/**
+			 * The step for how this node can be  reached from the parent
+			 * Null for the root 
+			 */
+			this.step = step;
+	
+	
+			this._isActive = true; // Nodes can be disabled; in this case no triples/constraints will be generated
+			
+			this.idToChild = {};
+			
+			//this.idToConstraint = {};
+		},
+
+		getRootNode: function() {
+			return this.root;
+		},
+			
+		isRoot: function() {
+			var result = this.parent ? false : true;
+			return result;
+		},
+		
+		/*
+		getVariableName: function() {
+			return this.varNode.getVariableName();
+		},*/
+		
+		getVar: function() {
+			var varName = this.varNode.getVariableName();
+			var result = sparql.Node.v(varName);
+			return result;			
+		},
+		
+		getVariable: function() {
+			if(!this.warningShown) {				
+				//console.log('[WARN] Deprecated. Use .getVar() instead');
+				this.warningShown = true;
+			}
+
+			return this.getVar();
+		},
+		
+		getStep: function() {
+			return this.step;
+		},
+		
+		getParent: function() {
+			return this.parent;
+		},
+		
+		getPath: function() {
+			var steps = [];
+			
+			var tmp = this;
+			while(tmp != this.root) {
+				steps.push(tmp.getStep());
+				tmp = tmp.getParent();
+			}
+			
+			steps.reverse();
+			
+			var result = new ns.Path(steps);
+			
+			return result;
+		},
+		
+		forPath: function(path) {
+			var steps = path.getSteps();
+			
+			var result = this;
+			_.each(steps, function(step) {
+				// TODO Allow steps back
+				result = result.forStep(step);
+			});
+			
+			return result;
+		},		
+
+		getIdStr: function() {
+			// TODO concat this id with those of all parents
+		},
+		
+		getSteps: function() {
+			return this.steps;
+		},
+		
+		getConstraints: function() {
+			return this.constraints;
+		},
+		
+		isActiveDirect: function() {
+			return this._isActive;
+		},
+				
+		
+		getElements: function() {
+			var result = [];
+			
+			var triples = this.getTriples();
+			if(triples.length > 0) {
+				var element = new sparql.ElementTriplesBlock(triples);
+				result.push(element);				
+			}
+			
+			
+			return result;
+		},
+		
+		/**
+		 * Get triples for the path starting from the root node until this node
+		 * 
+		 * @returns {Array}
+		 */
+		getTriples: function() {
+			var result = [];			
+			this.getTriples2(result);
+			return result;
+		},
+		
+		getTriples2: function(result) {
+			this.createDirectTriples2(result);
+			
+			if(this.parent) {
+				this.parent.getTriples2(result);
+			}
+			return result;			
+		},
+
+		/*
+		createTriples2: function(result) {
+			
+		},*/
+		
+		createDirectTriples: function() {
+			var result = [];
+			this.createDirectTriples2(result);
+			return result;
+		},
+				
+		
+		
+		/**
+		 * Create the element for moving from the parent to this node
+		 * 
+		 * TODO Cache the element, as the generator might allocate new vars on the next call
+		 */
+		createDirectTriples2: function(result) {
+			if(this.step) {
+				var sourceVar = this.parent.getVariable();
+				var targetVar = this.getVariable();
+				
+				var tmp = this.step.createElement(sourceVar, targetVar, this.generator);
+				
+				// FIXME
+				var triples = tmp.getTriples();
+				
+				result.push.apply(result, triples);
+				
+				//console.log("Created element", result);
+			}
+			
+			return result;
+			
+			/*
+			if(step instanceof ns.Step) {
+				result = ns.FacetUtils.createTriplesStepProperty(step, startVar, endVar);
+			} else if(step instanceof ns.StepFacet) {
+				result = ns.FacetUtils.createTriplesStepFacets(generator, step, startVar, endVar);
+			} else {
+				console.error("Should not happen: Step is ", step);
+			}
+			*/
+		},
+		
+		isActive: function() {
+			if(!this._isActive) {
+				return false;
+			}
+			
+			if(this.parent) {
+				return this.parent.isActive();
+			}
+			
+			return true;
+		},
+		
+		attachToParent: function() {
+			if(!this.parent) {
+				return
+			}
+			
+			this.parent[this.id] = this;			
+			this.parent.attachToParent();
+		},
+		
+		/*
+		hasConstraints: function() {
+			var result = _.isEmpty(idToConstraint);
+			return result;
+		},
+		
+		// Whether neither this nor any child have constraints
+		isEmpty: function() {
+			if(this.hasConstraints()) {
+				return false;
+			}
+			
+			var result = _.every(this.idConstraint, function(subNode) {
+				var subItem = subNode;
+				var result = subItem.isEmpty();
+				return result;
+			});
+			
+			return result;
+		},
+		*/
+			
+		/**
+		 * Convenience method, uses forStep
+		 * 
+		 * @param propertyUri
+		 * @param isInverse
+		 * @returns
+		 */
+		forProperty: function(propertyUri, isInverse) {
+			var step = new ns.Step(propertyUri, isInverse);
+			
+			var result = this.forStep(step);
+
+			return result;
+		},
+			
+		forStep: function(step) {
+			//console.log("Step is", step);
+			
+			var stepId = "" + JSON.stringify(step);
+			
+			var child = this.idToChild[stepId];
+			
+			if(!child) {
+				
+				var subVarNode = this.varNode.forStepId(stepId);
+				
+				child = new ns.FacetNode(subVarNode, step, this, this.root);
+				
+				/*
+				child = {
+						step: step,
+						child: facet
+				};*/
+				
+				//Unless we change something
+				// we do not add the node to the parent
+				this.idToChild[stepId] = child;				
+			}
+
+			return child;
+		},
+		
+		/**
+		 * Remove the step that is equal to the given one
+		 * 
+		 * @param step
+		 */
+		/*
+		removeConstraint: function(constraint) {
+			this.constraints = _.reject(this.constraints, function(c) {
+				_.equals(c, step);
+			});
+		},
+		
+		addConstraint: function(constraint) {
+			this.attachToParent();
+			
+			var id = JSON.stringify(constraint); //"" + constraint;
+
+			// TODO Exception if the id is object
+			//if(id == "[object]")
+			
+			this.idToConstraint[id] = constraint;
+		},
+		*/
+		
+		/**
+		 * Copy the state of this node to another one
+		 * 
+		 * @param targetNode
+		 */
+		copyTo: function(targetNode) {
+			//targetNode.variableName = this.variableName;
+			
+			_.each(this.getConstraints(), function(c) {
+				targetNode.addConstraint(c);
+			});			
+		},
+		
+		
+		/**
+		 * 
+		 * 
+		 * @returns the new root node.
+		 */
+		copyExclude: function() {
+			// Result is a new root node
+			var result = new ns.FacetNode();
+			console.log("Now root:" , result);
+			
+			this.root.copyExcludeRec(result, this);
+			
+			return result;
+		},
+			
+		copyExcludeRec: function(targetNode, excludeNode) {
+			
+			console.log("Copy:", this, targetNode);
+			
+			if(this === excludeNode) {
+				return;
+			}
+			
+			this.copyTo(targetNode);
+			
+			_.each(this.getSteps(), function(s) {
+				var childStep = s.step;
+				var childNode = s.child;
+				
+				console.log("child:", childStep, childNode);
+				
+				if(childNode === excludeNode) {
+					return;
+				}
+				
+				
+				
+				var newChildNode = targetNode.forStep(childStep);
+				console.log("New child:", newChildNode);
+				
+				childNode.copyExcludeRec(newChildNode, excludeNode);
+			});			
+
+			
+			//return result;
+		}
+	});
+
+
+	/**
+	 * Use this instead of the constructor
+	 * 
+	 */
+	ns.FacetNode.createRoot = function(v, generator) {
+
+		var varName = v.getName();
+		generator = generator ? generator : new sparql.GenSym("fv");
+		
+		var varNode = new ns.VarNode(varName, generator);		
+		result = new ns.FacetNode(varNode);
+		return result;
+	};
+
+	
+	/**
+	 * The idea of this class is to have a singe object
+	 * for all this currently rather distributed facet stuff
+	 * 
+	 * 
+	 * 
+	 */
+	ns.FacetManager = Class.create({
+		initialize: function(varName, generator) { //rootNode, generator) {
+			
+			var varNode = new ns.VarNode(varName, generator);
+			
+			this.rootNode = new ns.FacetNode(varNode);
+	
+			//this.rootNode = rootNode;
+			this.generator = generator;
+		},
+	
+			/*
+			create: function(varName, generator) {
+				var v = checkNotNull(varName);
+				var g = checkNotNull(generator);
+				
+				var rootNode = new ns.FacetNode(this, v);
+				
+				var result = new ns.FacetManager(rootNode, g);
+				
+				return result;
+			},*/
+		
+		getRootNode: function() {
+			return this.rootNode;
+		},
+		
+		getGenerator: function() {
+			return this.generator;
+		}
+	});
+	
+	
+	/**
+	 * Ties together a facetNode (only responsible for paths) and a constraint collection.
+	 * Constraints can be declaratively set on the facade and are converted to
+	 * appropriate constraints for the constraint collection.
+	 * 
+	 * e.g. from
+	 * var constraint = {
+	 * 	type: equals,
+	 * 	path: ...,
+	 * 	node: ...}
+	 * 
+	 * a constraint object is compiled.
+	 * 
+	 * 
+	 * @param constraintManager
+	 * @param facetNode
+	 * @returns {ns.SimpleFacetFacade}
+	 */
+	ns.SimpleFacetFacade = Class.create({
+		initialize: function(constraintManager, facetNode) {
+			this.constraintManager = constraintManager;
+			//this.facetNode = checkNotNull(facetNode);
+			this.facetNode = facetNode;
+		},
+
+		getFacetNode: function() {
+			return this.facetNode;
+		},
+		
+		getVariable: function() {
+			var result = this.facetNode.getVariable();
+			return result;
+		},
+		
+		getPath: function() {
+			return this.facetNode.getPath();
+		},
+		
+		forProperty: function(propertyName, isInverse) {
+			var fn = this.facetNode.forProperty(propertyName, isInverse);
+			var result = this.wrap(fn);
+			return result;								
+		},
+		
+		forStep: function(step) {
+			var fn = this.facetNode.forStep(step);
+			var result = this.wrap(fn);
+			return result;				
+		},
+		
+		wrap: function(facetNode) {
+			var result = new ns.SimpleFacetFacade(this.constraintManager, facetNode);
+			return result;
+		},
+		
+		forPathStr: function(pathStr) {
+			var path = ns.Path.fromString(pathStr);
+			var result = this.forPath(path);
+			
+			//console.log("path result is", result);
+			
+			return result;
+		},
+		
+		forPath: function(path) {
+			var fn = this.facetNode.forPath(path);
+			var result = this.wrap(fn);
+			return result;
+		},
+		
+		forProperty: function(propertyName, isInverse) {
+			var fn = this.facetNode.forProperty(propertyName, isInverse);
+			var result = this.wrap(fn);
+			return result;				
+		},
+
+		createConstraint: function(json) {
+			if(json.type != "equals") {
+				
+				throw "Only equals supported";
+			}
+			
+			var node = json.node;
+
+			//checkNotNull(node);
+			
+			var nodeValue = sparql.NodeValue.makeNode(node);
+			var result = ns.ConstraintUtils.createEquals(this.facetNode.getPath(), nodeValue);
+			
+			return result;
+		},
+		
+		/**
+		 * 
+		 * Support:
+		 * { type: equals, value: }
+		 * 
+		 * 
+		 * @param json
+		 */
+		addConstraint: function(json) {
+			var constraint = this.createConstraint(json);				
+			this.constraintManager.addConstraint(constraint);
+		},
+		
+		removeConstraint: function(json) {
+			var constraint = this.createConstraint(json);
+			this.constraintManager.moveConstraint(constraint);				
+		},
+		
+		// Returns the set of constraint that reference a path matching this one
+		getConstraints: function() {
+			var path = this.facetNode.getPath();
+			var constraints = this.constraintManager.getConstraintsByPath(path);
+			
+			return constraints;
+		},
+		
+		/**
+		 * TODO: Should the result include the path triples even if there is no constraint? Currently it includes them.
+		 * 
+		 * Returns a concept for the values at this node.
+		 * This concept can wrapped for getting the distinct value count
+		 * 
+		 * Also, the element can be extended with further elements
+		 */
+		createElements: function(includeSelfConstraints) {
+			var rootNode = this.facetNode.getRootNode();
+			var excludePath = includeSelfConstraints ? null : this.facetNode.getPath();
+			
+			// Create the constraint elements
+			var elements = this.constraintManager.createElements(rootNode, excludePath);
+			//console.log("___Constraint Elements:", elements);
+			
+			// Create the element for this path (if not exists)
+			var pathElements = this.facetNode.getElements();
+			//console.log("___Path Elements:", elements);
+			
+			elements.push.apply(elements, pathElements);
+			
+			var result = sparql.ElementUtils.flatten(elements);
+			//console.log("Flattened: ", result);
+			
+			// Remove duplicates
+			
+			return result;
+		},
+		
+		
+		/**
+		 * Creates the corresponding concept for the given node.
+		 * 
+		 * @param includeSelfConstraints Whether the created concept should
+		 *        include constraints that affect the variable
+		 *        corresponding to this node. 
+		 * 
+		 */
+		createConcept: function(includeSelfConstraints) {
+			var elements = this.createElements(includeSelfConstraints);
+			//var element = new sparql.ElementGroup(elements);
+			var v = this.getVariable();
+			
+			var result = new ns.Concept(elements, v);
+			return result;
+		},
+		
+		
+		/**
+		 * Returns a list of steps of _this_ node for which constraints exist
+		 * 
+		 * Use the filter to only select steps that e.g. correspond to outgoing properties
+		 */
+		getConstrainedSteps: function() {
+			var path = this.getPath();
+			var result = this.constraintManager.getConstrainedSteps(path);
+			return result;
+		}
+	});
+			
+			/**
+			 * Returns a list of steps for _this_ node for which constraints exists
+			 * 
+			 */
+			
+			
+			
+			
+			/**
+			 * Creates a util class for common facet needs:
+			 * - Create a concept for sub-facets
+			 * - Create a concept for the facet values
+			 * - ? more?
+			 */
+			/*
+			createUtils: function() {
+				
+			}
+			*/
+
+})();
+
+(function() {
+
+	var rdf = Jassa.rdf;
+	var vocab = Jassa.vocab;
+	var sparql = Jassa.sparql;
+	
+	var ns = Jassa.facete;
+
+	ns.QueryUtils = {
+		
+//		createTripleRdfProperties: function(propertyVar) {
+//			var result = new rdf.Triple(propertyVar, vocab.rdf.type, vocab.rdf.Property);
+//			return result;
+//		},
+
+//		createElementRdfProperties: function(propertyVar) {
+//			var triple = this.createTripleRdfProperties(propertyVar);
+//			var result = new sparql.ElementTriplesBlock([triple]);
+//			return result;
+//		},
+	
+		
+		
+		createElementsFacet: function(concept, isInverse, facetVar, valueVar) {
+			var result = [];
+			
+			// If the concept is isomorph to (?s ?p ?o , ?s), skip it because we are going to add the same triple
+			if(!concept.isSubjectConcept()) {
+				var elements = concept.getElements();
+				result.push.apply(result, elements);
+			}
+			
+			var s = concept.getVariable();
+			var p = facetVar;
+			var o = valueVar;
+		
+			var triples = isInverse
+				? [ new rdf.Triple(o, p, s) ]
+				: [ new rdf.Triple(s, p, o) ];
+			
+			var triplesBlock = new sparql.ElementTriplesBlock(triples);
+			
+			result.push(triplesBlock);
+			
+			return result;
+		},
+	
+		/**
+		 * Select ?facetVar (Count(Distinct(?__o)) As ?countFacetVar) { }
+		 * 
+		 */
+		createQueryFacetCount: function(concept, facetVar, countFacetVar, isInverse, sampleSize) {
+	
+			//var facetVar = sparql.Node.v("__p");
+			var valueVar = sparql.Node.v("__o");
+			var elements = ns.createElementsFacet(concept, isInverse, facetVar, valueVar);
+			
+			var result = ns.createQueryCount(element, sampleSize, valueVar, countFacetVar, [facetVar], true);
+	
+			return result;
+		},
+
+		
+//		createElementSubQuery: function(elements, limit, offset) {
+//			if(limit == null && offset == null) {
+//				return elements;
+//			}
+//			
+//			var subQuery = new sparql.Query();
+//			
+//			var subQueryElements = subQuery.getElements();
+//			subQueryElements.push.apply(subQueryElements, elements);
+//
+//			//subQuery.setResultStar(true);
+//			subQuery.setLimit(limit);
+//			subQuery.setOffset(offset);
+//			
+//			var resultElement = new sparql.ElementSubQuery(subQuery);			
+//
+//			return resultElement;
+//		},
+			
+//			if(groupVars) {
+//				for(var i = 0; i < groupVars.length; ++i) {					
+//					var groupVar = groupVars[i];					
+//					subQuery.projectVars.add(groupVar);
+//					//subQuery.groupBy.push(groupVar);
+//				}
+//			}
+//			
+//			if(variable) {
+//				subQuery.projectVars.add(variable);
+//			}
+//			
+//			if(subQuery.projectVars.vars.length === 0) {
+//		    	subQuery.isResultStar = true;
+//			}
+//			
+//			subQuery.limit = limit;
+//			
+//			result.getElements().push(new sparql.ElementSubQuery(subQuery));			
+//			} else {
+//				var resultElements = result.getElements();
+//				resultElements.push.apply(resultElements, elements);
+//			}
+//		},
+			
+		/**
+		 * Creates a query with Count(Distinct ?variable)) As outputVar for an element.
+		 * 
+		 */
+		createQueryCount: function(elements, limit, variable, outputVar, groupVars, useDistinct, options) {
+	
+			
+			var exprVar = variable ? new sparql.ExprVar(variable) : null;
+			
+			var result = new sparql.Query();
+			if(limit) {
+				var subQuery = new sparql.Query();
+				
+				var subQueryElements = subQuery.getElements();
+				subQueryElements.push.apply(subQueryElements, elements); //element.copySubstitute(function(x) { return x; }));
+	
+				if(groupVars) {
+					for(var i = 0; i < groupVars.length; ++i) {					
+						var groupVar = groupVars[i];					
+						subQuery.projectVars.add(groupVar);
+						//subQuery.groupBy.push(groupVar);
+					}
+				}
+				
+				if(variable) {
+					subQuery.projectVars.add(variable);
+				}
+				
+				if(subQuery.projectVars.vars.length === 0) {
+			    	subQuery.isResultStar = true;
+				}
+				
+				subQuery.limit = limit;
+				
+				result.getElements().push(new sparql.ElementSubQuery(subQuery));			
+			} else {
+				var resultElements = result.getElements();
+				resultElements.push.apply(resultElements, elements);
+			}
+			
+			//result.groupBy.push(outputVar);
+			if(groupVars) {
+				_(groupVars).each(function(groupVar) {
+					result.getProjectVars().add(groupVar);
+					result.getGroupBy().push(new sparql.ExprVar(groupVar));
+				});
+			}
+			
+			result.getProjectVars().add(outputVar, new sparql.E_Count(exprVar, useDistinct));
+			//ns.applyQueryOptions(result, options);
+			
+	//debugger;
+			//console.log("Created count query:" + result + " for element " + element);
+			return result;
+		}
+	};
+
+})();
+(function() {
+
+	var vocab = Jassa.vocab;
+	var util = Jassa.util;
+	var sparql = Jassa.sparql;
+	
+	var ns = Jassa.facete;
+
+	
+	/**
+	 * A set (list) of nodes. Can be negated to mean everything except for this set. 
+	 * Used as a base for the creation of filters and bindings for use with prepared queries.
+	 * 
+	 */
+	ns.NodeSet = Class.create({
+		initialize: function(nodes, isNegated) {
+			this.nodes = nodes;
+			this.isNegated = isNegated;
+		},
+		
+		getNodes: function() {
+			return this.nodes;
+		},
+		
+		isNegated: function() {
+			return this.isNegated;
+		}
+	});
+	
+	
+//	ns.FacetConceptBound = Class.create({
+//		initialize: function(facetConcept, nodeSet) {
+//			//this.concept = concept;
+//			//this.element = element;
+//			//this.bindings = bindings;
+//			
+//		},
+//		
+//		getElement: function() {
+//			return this.element;
+//		},
+//		
+//		
+//	});
+	
+
+	ns.FacetConceptItem = Class.create({
+		initialize: function(step, concept) {
+			this.step = step;
+			this.concept = concept;
+		},
+		
+		getStep: function() {
+			return this.step;
+		},
+		
+		getFacetConcept: function() {
+			return this.concept;
+		},
+		
+		toString: function() {
+			return this.step + ": " + this.concept;
+		}
+	});
+	
+	
+	/**
+	 * Returns a single element or null
+	 * 
+	 * TODO A high level API based on binding objects may be better
+	 */
+	ns.createFilter = function(v, nodes, isNegated) {
+		var uris = [];
+		
+//		var nodes = uriStrs.map(function(uriStr) {
+//			return rdf.NodeFactory.createUri(uriStr);
+//		});
+
+		var result = null;
+		if(nodes.length > 0) {
+			var expr = new sparql.E_In(new sparql.ExprVar(v), nodes);
+			
+			if(isNegated) {
+				expr = new sparql.E_LogicalNot(expr);
+			}
+
+			result = new sparql.ElementFilter([expr]);
+		}
+		
+		return result;
+	};
+	
+	// TODO Move to util package
+	ns.itemToArray = function(item) {
+		var result = [];
+		if(item != null) {
+			result.push(item);
+		}
+
+		return result;
+	};
+
+
+	/**
+	 * 
+	 * 
+	 * Use null or leave undefined to indicate no constraint 
+	 */
+	ns.LimitAndOffset = Class.create({
+		initialize: function(limit, offset) {
+			this.limit = limit;
+			this.offset = offset;
+		},
+		
+		getOffset: function() {
+			return this.offset;
+		},
+
+		getLimit: function() {
+			return this.limit;
+		}		
+	});
+
+	
+	ns.FacetState = Class.create({
+		isExpanded: function() {
+			throw "Override me";
+		},
+		
+		getResultRange: function() {
+			throw "Override me";
+		},
+		
+		getAggregationRange: function() {
+			throw "Override me";
+		}				
+	});
+
+	ns.FacetStateImpl = Class.create(ns.FacetState, {
+		initialize: function(isExpanded, resultRange, aggregationRange) {
+			this._isExpanded = isExpanded;
+			this.resultRange = resultRange;
+			this.aggregationRange = aggregationRange;
+		},
+		
+		isExpanded: function() {
+			return this._isExpanded;
+		},
+		
+		getResultRange: function() {
+			return this.resultRange; 
+		},
+		
+		getAggregationRange: function() {
+			return this.aggregationRange;			
+		}		
+	});
+	
+
+	ns.FacetStateProvider = Class.create({
+		getFacetState: function(path) {
+			throw "Override me";
+		}
+	});
+	
+	
+	
+	ns.FacetStateProviderImpl = Class.create({
+		initialize: function() {
+			this.pathToState = new util.HashMap();
+		},
+		
+		getMap: function() {
+			return this.pathToState;
+		},
+		
+		getFacetState: function(path) {
+			return this.pathToState.get(path);
+		}
+	});
+	
+	
+	ns.FacetConceptGenerator = Class.create({
+		createFacetConcept: function(path, isInverse) {
+			throw "Override me";
+		},
+
+		createFacetValueConcept: function(path, isInverse) {
+			throw "Override me";
+		}
+
+	});
+
+	
+	/**
+	 * This is just a POJO
+	 * 
+	 */
+	ns.FacetGeneratorConfig = Class.create({
+		initialize: function(baseConcept, rootFacetNode, constraintManager) {
+			this.baseConcept = baseConcept;
+			this.rootFacetNode = rootFacetNode;
+			this.constraintManager = constraintManager;
+		},
+
+		getBaseConcept: function() {
+			return this.baseConcept;
+		},
+		
+		getRootFacetNode: function() {
+			return this.rootFacetNode;			
+		},
+		
+		getConstraintManager: function() {
+			return this.constraintManager;			
+		}
+	});
+
+
+	// TODO Probably it is better to just make the "dataSource" an abstraction,
+	// rather than the facet concept generator.
+	ns.FacetGeneratorConfigProvider = Class.create({
+		getConfig: function() {
+			throw "Override me";			
+		},
+	});
+	
+	
+	ns.FacetGeneratorConfigProviderConst = Class.create(ns.FacetGeneratorConfigProvider, {
+		initialize: function(facetConfig) {
+			this.facetConfig = facetConfig;
+		},
+		
+		getConfig: function() {
+			return this.facetConfig;
+		}
+	});
+		
+	ns.FacetGeneratorConfigProviderIndirect = Class.create(ns.FacetGeneratorConfigProvider, {
+		initialize: function(baseConceptFactory, rootFacetNodeFactory, constraintManager) {
+			this.baseConceptFactory = baseConceptFactory;
+			this.rootFacetNodeFactory = rootFacetNodeFactory;
+			this.constraintManager = constraintManager;
+		},
+		
+		getConfig: function() {
+			var baseConcept = this.baseConceptFactory.createConcept();
+			var rootFacetNode = this.rootFacetNodeFactory.createFacetNode(); 
+			var constraintManager = this.constraintManager;			
+			//var constraintElements = constraintManager.createElements(rootFacetNode);
+			
+			var result = new ns.FacetGeneratorConfig(baseConcept, rootFacetNode, constraintManager);
+			return result;
+		}
+	});
+
+	
+	ns.FacetConceptGeneratorFactory = Class.create({
+		createFacetConceptGenerator: function() {
+			throw "Implement me";
+		}
+	});
+	
+	
+	/**
+	 * Retrieves a facetConfig from a facetConfigProvider and uses it
+	 * for the creation of a facetConceptGenerator.
+	 * 
+	 * These layers of indirection are there to allow creating a facetConceptFactory whose state
+	 * can be made static* - so whose state is based on a snapshot of the states of 
+	 * {baseConcept, rootFacetNode, constraintManager}.
+	 * 
+	 * *Currently the contract does not enforce this; the design is just aimed at enabling this.
+	 * 
+	 * Multiple calls to createFacetConfigGenerator may yield new objects with different configurations.
+	 * 
+	 */
+	ns.FacetConceptGeneratorFactoryImpl = Class.create(ns.FacetConceptGeneratorFactory, {
+		initialize: function(facetConfigProvider) {
+			this.facetConfigProvider = facetConfigProvider;
+		},
+		
+		createFacetConceptGenerator: function() {
+			var facetConfig = this.facetConfigProvider.getConfig();
+			
+			var result = new ns.FacetConceptGeneratorImpl(facetConfig);
+			return result;
+		}
+	});
+
+	ns.FacetConceptGeneratorImpl = Class.create(ns.FacetConceptGenerator, {
+		initialize: function(facetConfig) {
+			this.facetConfig = facetConfig;
+		},
+		
+		
+		/**
+		 * Create a concept for the set of resources at a given path
+		 * 
+		 * 
+		 */
+		createConceptResources: function(path, excludeSelfConstraints) {
+			var facetConfig = this.facetConfig;
+			
+			var baseConcept = facetConfig.getBaseConcept();
+			var rootFacetNode = facetConfig.getRootFacetNode(); 
+			var constraintManager = facetConfig.getConstraintManager();
+
+			
+			var excludePath = excludeSelfConstraints ? path : null;			
+			var constraintElements = constraintManager.createElements(rootFacetNode, excludePath);
+
+			var facetNode = rootFacetNode.forPath(path);
+			var facetVar = facetNode.getVar();
+
+			
+			var baseElements = baseConcept.getElements();
+
+			var facetElements; 
+			if(baseConcept.isSubjectConcept()) {
+				facetElements = constraintElements.length > 0 ? constraintElements : baseConcept.getElements(); 
+			} else {
+				facetElements = baseElements.concat(constraintElements); 
+			}
+			
+			var pathElements = facetNode.getElements();
+			facetElements.push.apply(facetElements, pathElements);
+
+			// TODO Fix the API - it should only need one call
+			var finalElements = sparql.ElementUtils.flatten(facetElements);
+			finalElements = sparql.ElementUtils.flattenElements(finalElements);
+			
+			//var result = new ns.Concept(finalElements, propertyVar);
+			var result = ns.Concept.createFromElements(finalElements, facetVar);
+			return result;
+		},
+		
+		/**
+		 * Creates a concept for the facets at a given path
+		 * 
+		 * This method signature is not final yet.
+		 *
+		 * 
+		 */
+		createConceptFacetsCore: function(path, isInverse, enableOptimization, singleProperty) { //excludeSelfConstraints) {
+
+			
+			var facetConfig = this.facetConfig;
+			
+			var baseConcept = facetConfig.getBaseConcept();
+			var rootFacetNode = facetConfig.getRootFacetNode(); 
+			var constraintManager = facetConfig.getConstraintManager();
+
+			
+			//var excludePath = excludeSelfConstraints ? path : null;			
+			var singleStep = null;
+			if(singleProperty) {
+				singleStep = new ns.Step(singleProperty.getUri(), isInverse);
+			}
+
+			
+			var excludePath = null;
+			if(singleStep) {
+				excludePath = path.copyAppendStep(singleStep);
+			}
+			
+			var constraintElements = constraintManager.createElements(rootFacetNode, excludePath);
+
+			var facetNode = rootFacetNode.forPath(path);
+			var facetVar = facetNode.getVar();
+
+			
+			var baseElements = baseConcept.getElements();
+			//baseElements.push.apply(baseElements, constraintElements);
+			
+			var facetElements; 
+			if(baseConcept.isSubjectConcept()) {
+				facetElements = constraintElements;
+			} else {
+				facetElements = baseElements.concat(constraintElements); 
+			}
+			
+			var varsMentioned = sparql.PatternUtils.getVarsMentioned(facetElements); //.getVarsMentioned();
+			var varNames = varsMentioned.map(function(v) { return v.getName(); });
+			
+			var genProperty = new sparql.GeneratorBlacklist(sparql.GenSym.create("p"), varNames);
+			var genObject = new sparql.GeneratorBlacklist(sparql.GenSym.create("o"), varNames);
+			
+			var propertyVar = rdf.NodeFactory.createVar(genProperty.next());
+			var objectVar = rdf.NodeFactory.createVar(genObject.next());
+			
+			// If there are no constraints, and the path points to root (i.e. is empty),
+			// we can use the optimization of using the query ?s a rdf:Property
+			// This makes several assumptions, TODO point to a discussion 
+
+			// but on large datasets it may work much better than having to scan everything for the properties.
+			
+			var hasConstraints = facetElements.length !== 0;
+
+			var triple; 
+			
+			if(enableOptimization && !hasConstraints && path.isEmpty()) {
+				triple = new rdf.Triple(propertyVar, vocab.rdf.type, vocab.rdf.Property);
+			} else {
+				if(!isInverse) {
+					triple = new rdf.Triple(facetVar, propertyVar, objectVar);
+				} else {
+					triple = new rdf.Triple(objectVar, propertyVar, facetVar);
+				}
+			}
+			
+			facetElements.push(new sparql.ElementTriplesBlock([triple]));
+			
+			
+			if(singleStep) {
+				var exprVar = new sparql.ExprVar(propertyVar);
+				var expr = new sparql.E_Equals(exprVar, sparql.NodeValue.makeNode(singleProperty));
+				facetElements.push(new sparql.ElementFilter([expr]));
+			}
+			
+			
+			var pathElements = facetNode.getElements();
+			facetElements.push.apply(facetElements, pathElements);
+
+			// TODO Fix the API - it should only need one call
+			var finalElements = sparql.ElementUtils.flatten(facetElements);
+			finalElements = sparql.ElementUtils.flattenElements(finalElements);
+			
+			//var result = new ns.Concept(finalElements, propertyVar);
+			var result = new ns.FacetConcept(finalElements, propertyVar, objectVar);
+			return result;
+		},
+		
+		/**
+		 * Creates a concept that fetches all facets at a given path
+		 *
+		 * Note that the returned concept does not necessarily
+		 * offer access to the facet's values.
+		 * 
+		 * Examples:
+		 * - ({?s a rdf:Property}, ?s)
+		 * - ({?s a ex:Foo . ?s ?p ?o }, ?p)
+		 * 
+		 */
+		createConceptFacets: function(path, isInverse) {
+			var facetConcept = this.createConceptFacetsCore(path, isInverse, true);
+			
+			var result = new ns.Concept.createFromElements(facetConcept.getElements(), facetConcept.getFacetVar());
+			return result;
+		},
+
+		
+		/**
+		 * TODO The name is a bit confusing...
+		 * 
+		 * The returned concept (of type FacetConcept) holds a reference
+		 * to the facet and facet value variables.
+		 * 
+		 * Intended use is to first obtain the set of properties, then use this
+		 * method, and constraint the concept based on the obtained properties.
+		 * 
+		 * Examples:
+		 * - ({?p a rdf:Propery . ?s ?p ?o }, ?p, ?o })
+		 * - ({?s a ex:Foo . ?o ?p ?s }, ?p, ?o)
+		 * 
+		 * @return  
+		 */
+		createConceptFacetValues: function(path, isInverse, properties, isNegated) { //(model, facetFacadeNode) {
+
+			isInverse = isInverse == null ? false : isInverse;
+			
+			var result;
+			
+			var propertyNames = properties.map(function(property) {
+				return property.getUri();
+			});
+			
+			
+			var facetConfig = this.facetConfig;
+			
+			var baseConcept = facetConfig.getBaseConcept();
+			var rootFacetNode = facetConfig.getRootFacetNode(); 
+			var constraintManager = facetConfig.getConstraintManager();
+
+
+			var facetNode = rootFacetNode.forPath(path);
+			
+
+			// Set up the concept for fetching facets on constrained paths
+			// However make sure to filter them by the user supplied array of properties
+			var tmpConstrainedSteps = constraintManager.getConstrainedSteps(path);
+			
+			//console.log("ConstrainedSteps: ", tmpConstrainedSteps);
+			
+			var constrainedSteps = _(tmpConstrainedSteps).filter(function(step) {
+				var isSameDirection = step.isInverse() === isInverse;
+				if(!isSameDirection) {
+					return false;
+				}
+				
+				var isContained = _(propertyNames).contains(step.getPropertyName());
+								
+				var result = isNegated ? !isContained : isContained;
+				return result;
+			});
+			
+			var excludePropertyNames = constrainedSteps.map(function(step) {
+				return step.getPropertyName();
+			});
+
+			var includeProperties = [];
+			var excludeProperties = [];
+			
+			_(properties).each(function(property) {
+				if(_(excludePropertyNames).contains(property.getUri())) {
+					excludeProperties.push(property);
+				}
+				else {
+					includeProperties.push(property);
+				}
+			});
+			
+			//console.log("excludePropertyNames: ", excludePropertyNames);
+			
+			// The first part of the result is formed by conceptItems for the constrained steps
+			var result = this.createConceptItems(facetNode, constrainedSteps);
+			
+			
+			// Set up the concept for fetching facets of all concepts that were NOT constrained
+			//var genericConcept = facetFacadeNode.createConcept(true);
+			var genericFacetConcept = this.createConceptFacetsCore(path, isInverse, false);
+			var genericElements = genericFacetConcept.getElements();
+			
+			//var genericConcept = genericFacetConcept.getConcept();
+			
+			//var genericElement = ns.createConceptItemForPath(baseConcept, facetNode, constraintManager, path, false);
+			
+			// Combine this with the user specified array of properties
+			var filterElement = ns.createFilter(genericFacetConcept.getFacetVar(), includeProperties, false);
+			if(filterElement != null) {
+				genericElements.push(filterElement);
+			}
+			
+			var genericConceptItem = new ns.FacetConceptItem(null, genericFacetConcept);
+			
+			result.push(genericConceptItem);
+			
+			return result;
+		},
+		
+		createConceptItems: function(facetNode, constrainedSteps) {
+			var self = this;
+			
+			var result = _(constrainedSteps).map(function(step) {
+				var tmp = self.createConceptItem(facetNode, step);
+				return tmp;
+			});
+			
+			return result;
+		},
+	
+		createConceptItem: function(facetNode, step) {
+			var propertyName = step.getPropertyName();
+	
+			var property = rdf.NodeFactory.createUri(propertyName);
+			
+			//var targetNode = facetNode.forStep(step);
+			//var path = targetNode.getPath();
+			
+			var path = facetNode.getPath();
+			var targetConcept = this.createConceptFacetsCore(path, step.isInverse(), false, property);
+			//var targetConcept = ns.createConceptForPath(rootFacetNode, constraintManager, path, true);
+			//var subNode = facetFacadeNode.forProperty(stepfacetUri.value, step.isInverse);
+				
+			var result = new ns.FacetConceptItem(step, targetConcept);
+			return result;
+		}
+		
+//		
+//		createConceptsFacetValues: function(path, isInverse, properties, isNegated) {
+//			
+//			var self = this;
+//	
+//			var sampleSize = null; // 50000;
+//			//var facetVar = sparql.Node.v("__p");
+//			//var countVar = sparql.Node.v("__c");
+//			
+//			var query = queryUtils.createQueryFacetCount(concept, facetVar,
+//					countVar, this.isInverse, sampleSize);
+//	
+//			//console.log("[DEBUG] Fetching facets with query: " + query);
+//			
+//			var uris = [];
+//			if(steps && steps.length > 0) {
+//				
+//				// Create the URIs from the steps
+//				for(var i = 0; i < steps.length; ++i) {
+//					var step = steps[i];
+//					
+//					if(step.isInverse() === this.isInverse) {
+//						var propertyUri = sparql.Node.uri(step.propertyName);
+//	
+//						uris.push(propertyUri);
+//					}
+//				}
+//				
+//				// Skip fetching if we have inclusion mode with no uris
+//				if(mode === true) {
+//					if(uris.length === 0) {
+//						return null;
+//					}
+//				}	
+//	
+//				
+//				if(uris.length !== 0) {
+//					var expr = new sparql.E_In(new sparql.ExprVar(facetVar), uris);
+//					
+//					if(!mode) {
+//						expr = new sparql.E_LogicalNot(expr);
+//					}
+//	
+//					var filter = new sparql.ElementFilter([expr]);
+//	
+//					//console.log("Filter: ", filter);
+//					query.elements.push(filter);
+//				}
+//			}
+//			
+//			return query;
+//	
+//		}
+
+//		createConceptFacetValues: function(path, isInverse) {
+//			var result = this.createConceptFacetsCore(path, isInverse, false);
+//			
+//			return result;
+//		}
+		
+		
+	});
+	
+
+
+//	ns.createConceptForPath = function(rootFacetNode, constraintManager, path, includeSelfConstraints) {
+//
+//		var facetNode = rootFacetNode.forPath(path); 
+//		var excludePath = includeSelfConstraints ? null : facetNode.getPath();
+//		
+//		// Create the constraint elements
+//		var elements = constraintManager.createElements(rootNode, excludePath);
+//		//console.log("___Constraint Elements:", elements);
+//		
+//		// Create the element for this path (if not exists)
+//		var pathElements = facetNode.getElements();
+//		//console.log("___Path Elements:", elements);
+//		
+//		elements.push.apply(elements, pathElements);
+//		
+//		var result = sparql.ElementUtils.flatten(elements);
+//		
+//		
+//		
+//		//console.log("Flattened: ", result);
+//		
+//		// Remove duplicates
+//		
+//		return result;
+//	};
+	
+
+	
+// The FacetQueryGenerator related classes did not turn out to be useful, as the query generation
+// in general is determined by the data fetching strategy.
+	
+//	ns.FacetQueryGeneratorFactory = Class.create({
+//		createFacetQueryGenerator: function() {
+//			throw "Override me";
+//		}
+//	});
+//	
+	
+//	ns.FacetQueryGeneratorFactoryImpl = Class.create(ns.FacetQueryGeneratorFactory, {
+//		initialize: function(facetConceptGeneratorFactory, facetStateProvider) {
+//			this.facetConceptGeneratorFactory = facetConceptGeneratorFactory;
+//			this.facetStateProvider = facetStateProvider;
+//		},
+//		
+//		createFacetQueryGenerator: function() {
+//			var facetConceptGenerator = this.facetConceptGeneratorFactory.createFacetConceptGenerator(); 
+//
+//			var result = new ns.FacetQueryGeneratorImpl(facetConceptGenerator, this.facetStateProvider);
+//			return result;
+//		}
+//	});
+//
+//	ns.FacetQueryGeneratorFactoryImpl.createFromFacetConfigProvider = function(facetConfigProvider, facetStateProvider) {
+//		var fcgf = new ns.FacetConceptGeneratorFactoryImpl(facetConfigProvider);
+//		
+//		var result = new ns.FacetQueryGeneratorFactoryImpl(fcgf, facetStateProvider);
+//		return result;
+//	};
+	
+	
+//	
+//	/**
+//	 * Combines the FacetConceptGenerator with a facetStateProvider
+//	 * in order to craft query objects.
+//	 * 
+//	 */
+//	ns.FacetQueryGeneratorImpl = Class.create({
+//		initialize: function(facetConceptFactory, facetStateProvider) {
+//			this.facetConceptFactory = facetConceptFactory;
+//			this.facetStateProvider = facetStateProvider;
+//		},
+//		
+//		/**
+//		 * Creates a query for retrieving the properties at a given path.
+//		 * 
+//		 * Applies limit and offset both for aggregation and retrieval according
+//		 * to the facetState for that path.
+//		 * 
+//		 * 
+//		 * The intended use of the querie's result set is to retrieve the facet count for each of the properties 
+//		 * 
+//		 * TODO: Which component should be responsible for retrieving all facets that match a certain keyword?
+//		 * 
+//		 * 
+//		 * 
+//		 */
+//		createQueryFacetList: function(path, isInverse) {
+//			var concept = this.facetConceptFactory.createFacetConcept(path, isInverse);
+//			
+//			var facetState = this.facetStateProvider.getFacetState(path, isInverse);
+//			
+//			return concept;
+//		},
+//		
+//		createQueryFacetCount: function() {
+//			
+//		},
+//		
+//		
+//		/**
+//		 * Create a set of queries that yield the facet value counts
+//		 * for a given set of properties facing at a direction at a given path
+//		 * 
+//		 * The result looks something like this:
+//		 * TODO Finalize this, and create a class for it.
+//		 * 
+//		 * {
+//		 *    constrained: {propertyName: concept}
+//		 *    unconstrained: concept
+//		 * }
+//		 * 
+//		 * 
+//		 */
+//		createFacetValueCountQueries: function(path, isInverse, properties, isNegated) {
+//			
+//			var self = this;
+//
+//			var sampleSize = null; // 50000;
+//			//var facetVar = sparql.Node.v("__p");
+//			//var countVar = sparql.Node.v("__c");
+//			
+//			var query = queryUtils.createQueryFacetCount(concept, facetVar,
+//					countVar, this.isInverse, sampleSize);
+//
+//			//console.log("[DEBUG] Fetching facets with query: " + query);
+//			
+//			var uris = [];
+//			if(steps && steps.length > 0) {
+//				
+//				// Create the URIs from the steps
+//				for(var i = 0; i < steps.length; ++i) {
+//					var step = steps[i];
+//					
+//					if(step.isInverse() === this.isInverse) {
+//						var propertyUri = sparql.Node.uri(step.propertyName);
+//
+//						uris.push(propertyUri);
+//					}
+//				}
+//				
+//				// Skip fetching if we have inclusion mode with no uris
+//				if(mode === true) {
+//					if(uris.length === 0) {
+//						return null;
+//					}
+//				}	
+//
+//				
+//				if(uris.length !== 0) {
+//					var expr = new sparql.E_In(new sparql.ExprVar(facetVar), uris);
+//					
+//					if(!mode) {
+//						expr = new sparql.E_LogicalNot(expr);
+//					}
+//
+//					var filter = new sparql.ElementFilter([expr]);
+//
+//					//console.log("Filter: ", filter);
+//					query.elements.push(filter);
+//				}
+//			}
+//			
+//			return query;
+//			
+//			
+//		},
+//		
+//		
+//		/**
+//		 * Some Notes on partitioning:
+//		 * - TODO Somehow cache the relation between filter configuration and fetch strategy
+//		 * Figure out which facet steps have constraints:
+//		 * For each of them we have to fetch the counts individually by excluding
+//		 * constraints on that path			
+//		 * On the other hand, we can do a single query to capture all non-constrained paths
+//		 */
+//		createFacetValueCountQueries: function(path, isInverse, propertyNames, isNegated) { //(model, facetFacadeNode) {
+//
+//			// TODO get access to rootFacetNode
+//			var facetNode = this.rootFacetNode.forPath(path);
+//			
+//
+//			// Set up the concept for fetching facets on constrained paths
+//			// However make sure to filter them by the user supplied array of properties
+//			var tmpConstrainedSteps = this.constraintManager.getConstrainedSteps(path);
+//			
+//			var constrainedSteps = _(tmpConstrainedSteps).filter(function(step) {
+//				var isSameDirection = step.isInverse() === isInverse;
+//				if(!isSameDirection) {
+//					return false;
+//				}
+//				
+//				var isContained = _(propertyNames).contains(step.getPropertyName());
+//								
+//				var result = isNegated ? !isContained : isContained;
+//				return result;
+//			});
+//			
+//			var excludePropertyNames = constrainedSteps.map(function(step) {
+//				return step.getPropertyName();
+//			});
+//			
+//			var constrainedConceptItems = this.createConceptItems(facetNode, constrainedSteps);
+//
+//			// Set up the concept for fetching facets of all concepts that were NOT constrained
+//			var genericConcept = facetFacadeNode.createConcept(true);
+//			
+//			
+//			// Combine this with the user specified array of properties 
+//			var filterElement = ns.createFilter(genericConcept.getVar(), excludePropertyNames, isNegated);
+//			if(filterElement != null) {
+//				genericConcept.getElements().push(filterElement);
+//			}
+//			
+//				
+//			
+//		},
+//
+//
+//		/**
+//		 * This function loads the facets of a specific concept.
+//		 */
+//		fnFetchSubFacets: function(sparqlService, conceptItem) {
+//	
+//			var facetUri = conceptItem.property;
+//			var concept = conceptItem.concept;
+//			
+//			var element = concept.getElement();
+//			var variable = concept.getVariable();
+//			
+//			var outputVar = sparql.Node.v("__c");
+//			var limit = null;
+//	
+//			var query = queryUtils.createQueryCount(element, null, variable, outputVar, null, true, null);
+//			//console.log("Fetching facets with ", query);
+//			var queryExecution = queryUtils.fetchInt(sparqlService, query, outputVar);
+//	
+//			
+//			var promise = queryExecution.pipe(function(facetCount) {
+//				conceptItem.facetCount = facetCount;
+//				//item.facetFacadeNode = subNode;
+//				//item.step = step;
+//	
+//				//console.log("ConceptItem: ", conceptItem);
+//				
+//				// We need to return arrays for result 
+//				var result = [conceptItem];
+//				return result;
+//			});
+//	
+//			return promise;
+//		},
+//
+//	
+//		/**
+//		 * Create the list of all facets that carry constraints and
+//		 * for which we have to fetch their facets.
+//		 */
+//		createConceptItems: function(facetNode, constrainedSteps) {
+//			var self = this;
+//			
+//			var result = _(constrainedSteps).map(function(step) {
+//				var tmp = self.createConceptItem(facetNode, step);
+//				return tmp;
+//			});
+//			
+//			return result;
+//		},
+//		
+//		createConceptItem: function(facetNode, step) {
+//			var propertyName = step.getPropertyName();
+//
+//			var targetNode = facetNode.forStep(step);
+//			var targetConcept = targetNode.createConcept();
+//			//var subNode = facetFacadeNode.forProperty(stepfacetUri.value, step.isInverse);
+//
+//			var result = new ns.StepAndConcept(step, targetConcept);
+//
+////			var prefix = self.isInverse ? "<" : "";
+////
+////			var result = {
+////				id: "simple_" + prefix + propertyName,
+////				type: 'property',
+////				property: propertyName,
+////				isInverse: step.isInverse,
+////				concept: targetConcept,
+////				step: step,
+////				facetFacadeNode: targetNode
+////			};		
+////			
+//			return result;
+//		}
+//	});
+//	
+
+})();
+
+
+
+
+
+//ns.FacetConceptGeneratorDelegate = Class.create(ns.FacetConceptGenerator, {
+//getDelegate: function() {
+//	throw "Override me";
+//},
+//
+//createFacetConcept: function(path, isInverse) {
+//	var delegate = this.getDelegate();
+//	var result = delegate.createFacetConcept(path, isInverse);
+//	return result;
+//},
+//
+//createFacetValueConcept: function(path, isInverse) {
+//	var delegate = this.getDelegate();
+//	var result = delegate.createFacetValueConcept(path, isInverse);
+//	return result;
+//}
+//});
+
+
+//ns.FacetConceptGeneratorIndirect = Class.create(ns.FacetConceptGeneratorDelegate, {
+//initialize: function(baseConceptFactory, rootFacetNodeFactory, constraintManager, facetStateProvider) {
+//	this.baseConceptFactory = baseConceptFactory;
+//	this.rootFacetNodeFactory = rootFacetNodeFactory;
+//	this.constraintManager = constraintManager;
+//	this.facetStateProvider = facetStateProvider;
+//},
+//
+//getDelegate: function() {
+//	var rootFacetNode = this.rootFacetNodeFactory.createFacetNode(); 
+//	var baseConcept = this.baseConceptFactory.createConcept();
+//	var constraintManager = this.constraintManager;			
+//	var constraintElements = constraintManager.createElements(rootFacetNode);
+//
+//	var result = new ns.FacetConceptGenerator(baseConcept, rootFacetNode, constraintManager);
+//	
+//	return result;
+//}
+//});
+
+(function($) {
+
+	
+	var service = Jassa.service;
+	
+	var ns = Jassa.facete;
+	
+	
+	
+	ns.FacetTreeServiceImpl = Class.create({
+		initialize: function(facetService, expansionSet) { //facetStateProvider) {
+			this.facetService = facetService;
+			this.expansionSet = expansionSet;
+			//this.facetStateProvider = facetStateProvider;
+		},
+		
+		fetchFacetTree: function() {
+			var path = new ns.Path.parse();
+			
+			var result = this.fetchFacetTreeRec(path);
+			
+			result.done(function(facetTree) { console.log("FacetTree: ", facetTree); });
+			
+			return result;
+		},
+		
+		fetchFacetTreeRec: function(path) {
+			
+			var self = this;
+			
+			
+			var result = $.Deferred();
+			
+			var promise = this.facetService.fetchFacets(path);
+			promise.done(function(facetItems) {
+
+				var data = [];
+				
+				var childPromises = [];
+				
+				var i = 0;
+				_(facetItems).each(function(facetItem) {
+					
+					//debugger;
+					var path = facetItem.getPath();
+
+										
+					var uri = facetItem.getNode().getUri();
+					
+					var isExpanded = self.expansionSet.contains(path);
+					//var childPath = path.copyAppendStep(new facete.Step(uri, false));
+
+					// Check if the node corresponding to the path is expanded so
+					// that we need to fetch the child facets
+					//var facetState = this.facetStateProvider.getFacetState(path);
+
+//					console.log("facetState:", childFacetState);
+//					console.log("childPath:" + childPath);
+					//console.log("childPath:" + facetItem.getPath());
+
+					
+					var dataItem = {
+						item: facetItem,
+						isExpanded: isExpanded,
+						//state: facetState,
+						children: null
+					};
+					++i;
+
+					data.push(dataItem);
+					
+					// TODO: Fetch the distinct value count for the path
+					if(!isExpanded) {
+						return;
+					}
+//					if(!(facetState && facetState.isExpanded())) {
+//						return;
+//					}
+					console.log("Got a child facet for path " + path);
+					
+					var childPromise = self.fetchFacetTreeRec(path).pipe(function(childItems) {
+						dataItem.children = childItems;
+					});
+
+					childPromises.push(childPromise);
+				});
+
+				
+				$.when.apply(window, childPromises)
+					.done(function() {
+
+//						var data = [];
+//						_(arguments).each(function(arg) {
+//							console.log('got arg', arg);
+//						});
+//						
+//						var item = {
+//							path: path,
+//							distinctValueCount: 
+//						};
+						
+						result.resolve(data);
+					}).
+					fail(function() {
+						result.fail();
+					});
+				
+			});
+			
+			return result.promise();
+		}
+	});
+	
+	
+	ns.FacetService = Class.create({
+		fetchFacets: function(path, isInverse) {
+			throw "Override me";
+		}
+	});
+	
+	
+	ns.FacetItem = Class.create({
+		initialize: function(path, node, distinctValueCount) {
+			this.path = path;
+			this.node = node;
+			this.distinctValueCount = distinctValueCount;
+		},
+
+//		getUri: functino() {
+//			return node.getUri 
+//		},
+		getNode: function() {
+			return this.node;
+		},
+		
+		getPath: function() {
+			return this.path;
+		},
+		
+		getDistinctValueCount: function() {
+			return this.distinctValueCount;
+		}
+	});
+	
+
+	ns.FacetServiceImpl = Class.create(ns.FacetService, {
+		initialize: function(queryExecutionFactory, facetConceptGenerator) {
+			this.qef = queryExecutionFactory;
+			this.facetConceptGenerator = facetConceptGenerator;
+		},
+
+		
+		createConceptFacetValues: function(path, excludeSelfConstraints) {
+			var concept = this.facetConceptGenerator.createConceptResources(path, excludeSelfConstraints);
+			return concept;
+		},
+		
+		fetchFacets: function(path, isInverse) {
+			var concept = this.facetConceptGenerator.createConceptFacets(path, isInverse);
+			
+			var query = ns.ConceptUtils.createQueryList(concept);
+			//alert("" + query);
+			// query.setLimit();
+			// query.setOffset();
+			
+			//var query = this.facetQueryGenerator.createQueryFacets();
+			
+			var qe = this.qef.createQueryExecution(query);
+			
+			var promise = service.ServiceUtils.fetchList(qe, concept.getVar());
+
+			
+			var self = this;
+			
+			var deferred = $.Deferred();
+
+			promise.done(function(properties) {
+				var promise = self.fetchFacetCounts(path, isInverse, properties, false);
+				
+				promise.done(function(r) {
+					deferred.resolve(r);
+				}).fail(function() {
+					deferred.fail();
+				});
+
+			}).fail(function() {
+				deferred.fail();
+			});
+			
+			
+			return deferred.promise();
+		},
+		
+		
+		//elements, limit, variable, outputVar, groupVars, useDistinct, options
+		fetchFacetCounts: function(path, isInverse, properties, isNegated) {
+			var facetConceptItems = this.facetConceptGenerator.createConceptFacetValues(path, isInverse, properties, isNegated);
+			
+			
+			var outputVar = rdf.NodeFactory.createVar("_c_");
+			
+			var self = this;
+			var promises = _(facetConceptItems).map(function(item) {
+			
+				var facetConcept = item.getFacetConcept();
+				
+				var groupVar = facetConcept.getFacetVar();
+				var countVar = facetConcept.getFacetValueVar(); 
+				var elements = facetConcept.getElements();
+			
+				var query = ns.QueryUtils.createQueryCount(elements, null, countVar, outputVar, [groupVar], true); 
+				
+				var qe = self.qef.createQueryExecution(query);
+				
+				//qe.setTimeout()
+				
+				var promise = qe.execSelect().pipe(function(rs) {
+					var r = [];
+					while(rs.hasNext()) {
+						var binding = rs.nextBinding();
+						
+						var propertyNode = binding.get(groupVar);
+						var propertyName = propertyNode.getUri();
+						
+						var step = new ns.Step(propertyName, isInverse);
+						var childPath = path.copyAppendStep(step);
+						
+						var distinctValueCount = binding.get(outputVar).getLiteralValue();
+						
+						var facetItem = new ns.FacetItem(childPath, propertyNode, distinctValueCount);
+						r.push(facetItem);
+					}
+					return r;
+				});
+				
+				//console.log("Test: " + query);
+				return promise;
+			});
+			
+	
+			var d = $.Deferred();
+			$.when.apply(window, promises).done(function() {
+				var r = [];
+				
+				for(var i = 0; i < arguments.length; ++i) {
+					var items = arguments[i];
+					//alert(items);
+					
+					r.push.apply(r, items);
+				}
+
+				d.resolve(r);
+			}).fail(function() {
+				d.fail();
+			})
+
+			return d.promise();
+		}
+	});
+	
+	
+	
+	
+	// Below code needs to be ported or removed
+	
+	var Todo = {
+	
+		/**
+		 * Tries to count all pages. If it fails, attempts to count the
+		 * pages within the current partition
+		 */
+		refreshPageCount: function() {
+			//console.log("Refreshing page count");
+
+			var self = this;
+
+			if(!this.tableExecutor) {
+				self.paginatorModel.set({pageCount: 1});
+				return;
+			};
+
+			var result = $.Deferred();
+
+			//console.log('isLoading', self.tableModel.attributes);
+			self.paginatorModel.set({isLoadingPageCount: true});
+			
+			var successAction = function(info) {				
+				self.tableModel.set({
+					itemCount: info.count,
+					hasMoreItems: info.more
+				});
+				
+				self.paginatorModel.set({
+					isLoadingPageCount: false
+				});
+				
+				result.resolve();
+			};
+				
+			
+			// Experiment with timeouts:
+			// If the count does not return within 'timeout' seconds, we try to count again
+			// with a certain threshold
+			var sampleSize = 10000;
+			var timeout = 3000;
+			
+			
+			var task = this.tableExecutor.fetchResultSetSize(null, null, { timeout: timeout });
+			
+			
+			task.fail(function() {
+				
+				console.log("[WARN] Timeout encountered when retrieving page count - retrying with sample strategy");
+				
+				var sampleTask = self.tableExecutor.fetchResultSetSize(
+					sampleSize,
+					null,
+					{ timeout: timeout }
+				); 
+
+				sampleTask.pipe(successAction);
+				
+				sampleTask.fail(function() {
+					console.log("[ERROR] Timout encountered during fallback sampling strategy - returning only 1 page")
+					
+					self.paginatorModel.set({
+						isLoadingPageCount: false
+					});
+
+					result.resolve({
+						itemCount: 1,
+						hasMoreItems: true
+					});
+					
+				})
+				
+			});
+			
+			
+			task.pipe(successAction);
+		},
+		
+		omfgWhatDidIDo_IWasABadProgrammer: function() {
+		
+			
+			/*
+			 * For each obtained concept, fetch the facets and facet counts  
+			 */
+			var promises = [];			
+			for(var i = 0; i < conceptItems.length; ++i) {
+				var conceptItem = conceptItems[i];
+				//console.log("Fetching data for concept item: ", conceptItem);
+				var promise = this.fnFetchSubFacets(this.sparqlService, conceptItem);
+				promises.push(promise);
+			}
+			
+	
+			//console.log("GenericConcept: " + concept, concept.isSubjectConcept());
+	
+	
+			var children = model.get("children");
+			//var syncer = new backboneUtils.CollectionCombine(children);
+	
+			// Get the facets of the concept
+			var tmpPromises = _.map(this.facetProviders, function(facetProvider) {
+				// TODO: We do not want the facets of the concept,
+				// but of the concept + constraints
+				
+				// This means: We need to get all constraints at the current path -
+				// or more specifically: All steps.
+				
+				
+				var tmp = facetProvider.fetchFacets(concept, false, constrainedSteps);
+	
+				var promise = tmp.pipe(function(items) {
+	
+	
+					var mapped = [];
+					for(var i = 0; i < items.length; ++i) {
+						var item = items[i];
+	
+						//var mapped = _.map(items, function(item) {
+	
+						var facetUri = item.facetUri;
+						var isInverse = item.isInverse;
+	
+						var step = {
+							type: 'property',
+							property: facetUri,
+							isInverse: isInverse
+						};
+						
+						var subFacadeNode = facetFacadeNode.forProperty(facetUri, isInverse);
+						
+						/*
+						item = {
+								facetFacadeNode: subNode,
+								step: step
+						};
+						*/
+						item.facetFacadeNode = subFacadeNode;
+						item.facetNode = subFacadeNode.getFacetNode();
+						item.step = step;
+	
+						mapped.push(item);
+					}
+						//console.log("Mapped model:", item);
+	
+						//return item;
+					//});
+	
+					return mapped;
+				});
+	
+				return promise;
+			});
+	
+			model.set({
+				isLoading : true
+			});
+	
+			promises.push.apply(promises, tmpPromises);
+	
+			//console.log("[DEBUG] Number of promises loading " + promises.length, promises);
+			
+			var finalPromise = $.when.apply(null, promises);
+			
+			finalPromise.always(function() {
+				model.set({
+					isLoading : false
+				});
+			});
+	
+			
+				
+			var reallyFinalPromise = $.Deferred();
+				
+			finalPromise.pipe(function() {
+				
+				
+				
+				//console.log("Arguments: ", arguments);
+				var items = [];
+				for(var i = 0; i < arguments.length; ++i) {
+					var args = arguments[i];
+					
+					items.push.apply(items, args);
+				}
+	
+	            var itemIds = [];
+	            for(var i = 0; i < items.length; ++i) {
+	                var item = items[i];
+	                var itemId = item.id;
+	                itemIds.push(itemId);
+	            }
+	
+	
+	            // Find all children, whose ID was not yeld
+	            var childIds = children.map(function(child) {
+	                return child.id;
+	            });
+	
+	
+	            var removeChildIds = _.difference(childIds, itemIds);
+	            children.remove(removeChildIds);
+	/*
+	            for(var i = 0; i < removeChildIds.length; ++i) {
+	                var childId = removeChildIds
+	            }
+	*/
+	
+				for(var i = 0; i < items.length; ++i) {
+					var item = items[i];
+					
+					var previous = children.get(item.id);
+					if(previous) {
+						var tmp = item;
+						item = previous;
+						item.set(tmp);
+					} else {
+						children.add(item);
+					}
+				}
+	
+				var subPromises = [];
+				children.each(function(child) {
+					var facetFacadeNode = child.get('facetFacadeNode');
+					var subPromise = self.updateFacets(child, facetFacadeNode);
+					subPromises.push(subPromise);
+				});
+				
+				var task = $.when.apply(null, subPromises);
+				
+				task.done(function() {
+					reallyFinalPromise.resolve();					
+				}).fail(function() {
+					reallyFinalPromise.fail();
+				});
+				
+				/*
+				_.each(items, function(item) {
+					item.done(function(a) {
+						console.log("FFS", a);
+					});
+				});*/
+				/*
+				console.log("Children", children);
+				console.log("Items", items);
+				for(var i = 0; i < items.length; ++i) {
+					var item = items[i];
+					console.log("Child[" + i + "]: ", item); // + JSON.stringify(items[i]));
+				}
+				children.set(items);
+				console.log("New children", children);
+				*/
+		});
+		}
+	};
+
+})(jQuery);
+
+(function() {
+	
+	var service = Jassa.service;
+	var rdf = Jassa.rdf;
+	
+	
+	var facete = Jassa.facete;
+	
+	var ns = Jassa.facete;
+
+	
+
+	/**
+	 * Example / Test about the API is supposed to work
+	 * 
+	 */
+	ns.test = function() {
+		var qef = new service.QueryExecutionFactoryHttp("http://localhost/sparql", []);
+
+		var constraintManager = new facete.ConstraintManager();
+		
+		
+
+
+		
+		var baseVar = rdf.NodeFactory.createVar("s");
+		//alert("test" + baseVar);
+		var baseConcept = facete.ConceptUtils.createSubjectConcept(baseVar);
+		var rootFacetNode = facete.FacetNode.createRoot(baseVar);
+		var facetStateProvider = new facete.FacetStateProviderImpl();		
+		
+		var facetConfigProvider = new facete.FacetGeneratorConfigProviderIndirect(
+			new facete.ConceptFactoryConst(baseConcept),
+			new facete.FacetNodeFactoryConst(rootFacetNode),
+			constraintManager
+		);
+		
+		var fcgf = new ns.FacetConceptGeneratorFactoryImpl(facetConfigProvider);
+		var facetConceptGenerator = fcgf.createFacetConceptGenerator();
+		
+		var facetService = new facete.FacetServiceImpl(qef, facetConceptGenerator);
+		
+
+		
+//		constraintManager.addConstraint(new facete.ConstraintSpecPathValue(
+//			"equal",
+//			facete.Path.parse("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+//			sparql.NodeValue.makeNode(rdf.NodeFactory.createUri("http://www.w3.org/2002/07/owl#Class"))
+//		));
+
+		
+		
+		facetService.fetchFacets(facete.Path.parse("")).done(function(list) {
+			
+			//alert(JSON.stringify(list));
+			
+			_(list).each(function(item) {
+				console.log("FacetItem: " + JSON.stringify(item));
+			});
+		});
+		
+		
+		var cn = facetService.createConceptFacetValues(facete.Path.parse(""));
+		console.log("FacetValues: " + cn);
+		
+		//var fqgf = facete.FacetQueryGeneratorFactoryImpl.createFromFacetConfigProvider(facetConfigProvider, facetStateProvider);
+
+		
+		//var queryGenerator = fqgf.createFacetQueryGenerator();
+		
+		//var facetConcept = queryGenerator.createFacetConcept(facete.Path.parse("http://foo"));
+//		var facetConcept = queryGenerator.createQueryFacetList(facete.Path.parse(""));
+//		
+//		alert("" + facetConcept);
+		
+		
+	};
+
+
+	ns.testQueryApi = function() {
+		var qef = new service.QueryExecutionFactoryHttp("http://localhost/sparql", []);
+		var qe = qef.createQueryExecution("Select * { ?s ?p ?o } Limit 10");
+		
+		//qe.setTimeOut(3000);
+		var s = rdf.NodeFactory.createVar("s");
+		
+		qe.execSelect().done(function(rs) {
+			while(rs.hasNext()) {
+				console.log("" + rs.nextBinding().get(s));
+			}
+		});
+		
+	};
+
+	
 })();
