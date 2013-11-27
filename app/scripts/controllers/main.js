@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('mui2App')
-  .controller('MainCtrl', function ($scope, $compile, sparqlService, sponateService, strTemplateParser) {
+  .controller('MainCtrl', function ($scope, $compile, sparqlService, sponateService, strTemplateParser, facetService) {
     /*
      * event handlers
      */
@@ -98,17 +98,18 @@ angular.module('mui2App')
           sponateService.initialize(service, prefixes);
         }
 
+        // TODO: add error handling!!!
+        if (this.query !== query || this.sponateMapping !== sponateMapping) {
+          sponateService.addMap({
+              'name' : this.id,
+              // TODO: use eval instead of JSON.parse
+              'template' : [ JSON.parse(sponateMapping) ],
+              'from' : query
+            });
+        }
         this.infoTemplate = infoTemplate;
         this.query = query;
         this.sponateMapping = sponateMapping;
-        // TODO: add error handling!!!
-        sponateService.addMap({
-            'name' : this.id,
-            // TODO: use eval instead of JSON.parse
-            'template' : [ JSON.parse(sponateMapping) ],
-            'from' : query
-          });
-
         console.log('Concept ' + this.name + ' updated');
       },
 

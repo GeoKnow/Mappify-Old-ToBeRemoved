@@ -1,16 +1,24 @@
-<div ng-repeat="facet in facets">
-  <div class="mui-facet-cell">
-    <div class="mui-facet-row" ng-class="{'mui-selected': facet.selected==true}">
-      <span ng-show="facet.childFacets.length > 0">
-        <span style="padding-left: {{12*depth}}px" class="mui-collapse" ng-show="facet.collapsed"><a ng-click="facet.toggleCollapsed()">+</a></span>
-        <span style="padding-left: {{12*depth}}px" class="mui-collapse" ng-show="!facet.collapsed"><a ng-click="facet.toggleCollapsed()">-</a></span>
-      </span>
-      <div style="margin-left: {{12*depth+20}}px" class="mui-facet-name" ng-click="facet.toggleSelected()">
-        {{facet.uri}}
-      </div>
-    </div>
+<div ng-class="{'frame': facet.isExpanded}">
+  <div class="facet-row mui-facet-row" ng-class="{'highlite': facet.isExpanded}">
+    <a ng-show="facet.isExpanded" href="" ng-click="toggleCollapsed(facet.item.getPath())">
+      <!--span class="glyphicon glyphicon-chevron-down"></span-->
+      <span class="glyphicon icon-chevron-down"></span>
+    </a>
+    <a ng-show="!facet.isExpanded" href="" ng-click="toggleCollapsed(facet.item.getPath())">
+      <!--span class="glyphicon glyphicon-chevron-right"></span-->
+      <span class="glyphicon icon-chevron-right"></span>
+    </a>
+    <a title="{{facet.item.getNode().getUri()}}" href="" ng-click="toggleSelected(facet.item.getPath())">{{facet.item.getNode().getUri()}}</a>
+    <span style="float: right" class="badge">{{facet.item.getDistinctValueCount()}}</span>  
   </div>
-  <span ng-show="!facet.collapsed">
-  <facet-tree-item ng-show="!facet.collapsed" facets="facet.childFacets" depth="depth+1"></facet-tree-item>
+
+  <span
+      ng-show="facet.isExpanded && facet.children.length == 0"
+      style="color: #aaaaaa; padding-left: {{16 * (facet.item.getPath().getLength() + 1)}}px">
+    (no entries)
   </span>
+  <div
+      style="padding-left: {{16 * (facet.item.getPath().getLength() + 1)}}px"
+      ng-repeat="facet in facet.children"
+      ng-include="'views/facet-tree-item.html'"></div>
 </div>

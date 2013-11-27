@@ -2,18 +2,14 @@
   width: 15em;
 }
 .mui-facet-cell {
-  /*width: 15em; */
 }
 
 .mui-collapse {
   cursor: pointer;
-  /*width: 1em !important;*/
   float: left;
 }
 
 .mui-facet-name {
-  /*width: 15em; */
-  /*display:inline-block*/
   margin-left: 5px;
 }
 
@@ -25,8 +21,52 @@
   text-overflow:ellipsis;
   overflow:hidden; 
   width:300%;
+  /* FIXME: the following font settings are just for debugging purposes */
+  font-size: 10px;
+  font-weight: 200;
+  line-height: 20px;
 }
 
 .mui-facet-viewport {
   overflow-x: hidden !important;
+}
+
+
+.image {
+  max-width: 144px;
+  max-height: 144px;
+  vertical-align: middle;
+}
+
+.facet-row:hover {
+  background-color: #bbccff;
+}
+
+.highlite {
+  background-color: #ddeeff;
+}
+
+.frame {
+  border: 1px;
+  border-collapse: true;
+  border-style: solid;
+  border-color: #cccccc;
+  padding-right: 0px;
+  margin-top: 3px;
+  margin-bottom: 3px;
+}
+
+.image-frame {
+  display: table;
+
+  width: 150px;
+  height: 150px;  
+  line-height: 150px; /* should match height */
+  text-align: center;
+
+  border: 1px;
+  border-collapse: true;
+  border-style: solid;
+  border-color: #CCCCCC;
+  background-color: #EEEEEE;
 }

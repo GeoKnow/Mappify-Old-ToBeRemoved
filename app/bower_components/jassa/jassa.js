@@ -161,6 +161,7 @@ module["exports"] = Jassa;
 	};
 	
 	ns.defaultHashCode = function(a) {
+		var result = null;
 		if(a && a.hashCode) {
 			result = a.hashCode();
 		}
@@ -822,7 +823,7 @@ module["exports"] = Jassa;
 		 * 
 		 */
 		createTypedLiteralFromValue: function(val, typeUri) {
-			var dtype = rdf.RdfDatatypes[typeUri];
+			var dtype = ns.RdfDatatypes[typeUri];
 			if(!dtype) {
 				console.log('[ERROR] No dtype for ' + typeUri);
 				throw 'Bailing out';
@@ -831,9 +832,9 @@ module["exports"] = Jassa;
 			var lex = dtype.unparse(val);
 			var lang = null;
 			
-			var literalLabel = new rdf.LiteralLabel(val, lex, lang, dtype);
+			var literalLabel = new ns.LiteralLabel(val, lex, lang, dtype);
 			
-			var result = new rdf.Node_Literal(literalLabel);
+			var result = new ns.Node_Literal(literalLabel);
 			
 			return result;
 		},
@@ -844,7 +845,7 @@ module["exports"] = Jassa;
 		 * 
 		 */
 		createTypedLiteralFromString: function(str, typeUri) {
-			var dtype = rdf.RdfDatatypes[typeUri];
+			var dtype = ns.RdfDatatypes[typeUri];
 			if(!dtype) {
 				console.log('[ERROR] No dtype for ' + typeUri);
 				throw 'Bailing out';
@@ -857,9 +858,9 @@ module["exports"] = Jassa;
 			//var lex = s; //dtype.parse(str);
 			var lang = null;
 			
-			var literalLabel = new rdf.LiteralLabel(val, lex, lang, dtype);
+			var literalLabel = new ns.LiteralLabel(val, lex, lang, dtype);
 			
-			var result = new rdf.Node_Literal(literalLabel);
+			var result = new ns.Node_Literal(literalLabel);
 			
 			return result;
 		},
@@ -6089,7 +6090,6 @@ module["exports"] = Jassa;
 //				offset: this.offset
 //			};
 			var config = new ns.QueryConfig(this.config.criteria, this.config.limit, this.config.offset);
-			
 			var result = this.store.execute(config);
 			return result;
 		}
@@ -8157,6 +8157,8 @@ or simply: Angular + Magic Sparql = Angular Marql
 (function() {
 
 	var ns = Jassa.facete;
+	var sparql = Jassa.sparql;
+	var rdf = Jassa.rdf;
 	
 
 	/**
@@ -8426,6 +8428,7 @@ or simply: Angular + Magic Sparql = Angular Marql
 	var sparql = Jassa.sparql;
 	
 	var ns = Jassa.facete;
+	var rdf = Jassa.rdf;
 
 	
 	/**
@@ -8500,7 +8503,7 @@ or simply: Angular + Magic Sparql = Angular Marql
 
 			//pathManager = new facets.PathManager(s.value);
 			
-			result = new facete.Concept(conceptElement, s);
+			var result = new ns.Concept(conceptElement, s);
 
 			return result;
 		},
@@ -9081,8 +9084,8 @@ or simply: Angular + Magic Sparql = Angular Marql
 
 	ns.ConstraintElementFactoryBBoxRange = Class.create(ns.ConstraintElementFactory, {
 		initialize: function() {
-			this.stepX = new facete.Step(vocab.wgs84.str.lon);
-			this.stepY = new facete.Step(vocab.wgs84.str.la);
+			this.stepX = new ns.Step(vocab.wgs84.str.lon);
+			this.stepY = new ns.Step(vocab.wgs84.str.la);
 		},
 		
 		createElementsAndExprs: function(rootFacetNode, spec) {
@@ -9374,10 +9377,10 @@ or simply: Angular + Magic Sparql = Angular Marql
 	ns.createDefaultConstraintElementFactories = function() {
 		var result = new util.ObjectMap();
 	
-		result.put("exist", new facete.ConstraintElementFactoryExist());
-		result.put("equal", new facete.ConstraintElementFactoryEqual());
+		result.put("exist", new ns.ConstraintElementFactoryExist());
+		result.put("equal", new ns.ConstraintElementFactoryEqual());
 		//registry.put("range", new facete.ConstaintElementFactoryRange());		
-		result.put("bbox", new facete.ConstraintElementFactoryBBoxRange());
+		result.put("bbox", new ns.ConstraintElementFactoryBBoxRange());
 
 		
 		return result;
@@ -10227,7 +10230,7 @@ or simply: Angular + Magic Sparql = Angular Marql
 		generator = generator ? generator : new sparql.GenSym("fv");
 		
 		var varNode = new ns.VarNode(varName, generator);		
-		result = new ns.FacetNode(varNode);
+		var result = new ns.FacetNode(varNode);
 		return result;
 	};
 
@@ -10342,12 +10345,6 @@ or simply: Angular + Magic Sparql = Angular Marql
 			return result;
 		},
 		
-		forProperty: function(propertyName, isInverse) {
-			var fn = this.facetNode.forProperty(propertyName, isInverse);
-			var result = this.wrap(fn);
-			return result;				
-		},
-
 		createConstraint: function(json) {
 			if(json.type != "equals") {
 				
@@ -10643,6 +10640,7 @@ or simply: Angular + Magic Sparql = Angular Marql
 	var vocab = Jassa.vocab;
 	var util = Jassa.util;
 	var sparql = Jassa.sparql;
+	var rdf = Jassa.rdf;
 	
 	var ns = Jassa.facete;
 
@@ -11625,6 +11623,7 @@ or simply: Angular + Magic Sparql = Angular Marql
 
 	
 	var service = Jassa.service;
+	var rdf = Jassa.rdf;
 	
 	var ns = Jassa.facete;
 	

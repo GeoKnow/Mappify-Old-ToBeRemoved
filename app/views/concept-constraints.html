@@ -1,7 +1,9 @@
 <div id="mui-tab-content-costraints">
-  <div id="mui-facets" ng-controller="FacetTreeCtrl">
-      <div ng-include="'views/facet-tree.html'"></div>
+  <div id="mui-facets" ng-controller="FacetTreeCtrl" data-ng-init="init()">
+    <div style="width: 30%">
+      <div ng-include="'views/facet-tree-item.html'"></div>
     </div>
+  </div>
   <div id="mui-constraints" class="tabbable">
     <ul class="nav nav-tabs mui-tabs-top-style">
       <li class="mui-tabs-top-style"><a ng-click="setActive('value')">value</a></li>

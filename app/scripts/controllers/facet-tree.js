@@ -1,36 +1,33 @@
 'use strict';
 
 angular.module('mui2App')
-  .controller('FacetTreeCtrl', function($scope) {
+  .controller('FacetTreeCtrl', function($rootScope, $scope, facetService) {
     $scope.rowHeight = 30;
     $scope.panelWidth = '10em';
-  })
 
-  .directive('facetTreeItem', function($compile) {
-    return {
-        restrict: 'E',
-        scope: { facets: '=', depth: '='},
-        templateUrl: 'views/facet-tree-item.html',
-        compile: function(tElement, tAttr) {
-          var contents = tElement.contents().remove();
-          var compiledContents;
+    $scope.refreshFacets = function() {
+      facetService.fetchFacets().then(function(data) {
+        $scope.facet = data;
+      });
+    };
+    
+    $scope.init = function() {
+      $scope.refreshFacets();
+    };
+    
+    $scope.toggleCollapsed = function(path) {
+      console.log('toggle collapsed called');
+      var expansionSet = facetService.getExpansionSet();
+      Jassa.util.CollectionUtils.toggleItem(expansionSet, path);
+      
+      console.log("ExpansionSet: " + expansionSet);
+      
+      $scope.refreshFacets();
+    };
+    
+    
+    $scope.toggleSelected = function(path) {
 
-          return function(scope, iElement, iAttr) {
-            if(!compiledContents) {
-              compiledContents = $compile(contents);
-            }
-
-            compiledContents(scope, function(clone, scope) {
-              // event handler that deselects all facets of the
-              // scope at hand
-              scope.$on('mui-facets-deselect-down', function() {
-                for(var facetNr in scope.facets) {
-                  scope.facets[facetNr].selected = false;
-                }
-              });
-              iElement.append(clone);
-            });
-          };
-        }
-      };
+      $rootScope.$broadcast("facetSelected", path);
+    };
   });
