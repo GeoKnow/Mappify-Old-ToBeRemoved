@@ -18,9 +18,10 @@ angular.module('mui2App')
               var startPos = parsePos + 2; // parsepos is the position of the
                                            // first {{
               var attr = inputStr.substr(startPos, closingPos-startPos);
-              if (queryResults[attr] !== 'undefined') {
+              if (queryResults[attr] !== undefined) {
                 var attrValue = queryResults[attr];
                 // remove leading and trailing angle brackets
+                // FIXME: got this error here: TypeError: attrValue is undefined
                 if (attrValue.startsWith('<') && attrValue.endsWith('>')) {
                   attrValue = attrValue.substring(1, attrValue.length-1);
                 }

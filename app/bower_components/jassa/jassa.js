@@ -4041,8 +4041,11 @@ module["exports"] = Jassa;
 		},
 
 		evalNodeValue: function(expr, binding) {
-		}
+		},
 
+		evalConstant : function(expr, binding) {
+
+		}
 	});
 
 	
