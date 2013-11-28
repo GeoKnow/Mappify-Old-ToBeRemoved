@@ -170,6 +170,7 @@ angular.module('mui2App')
      * settings
      */
     $scope.concepts = [];
+    $scope.selectedFacet = null;
     // even though there can only be one selected concept (or none) a list is expected
     $scope.selectedConcepts = [];
     $scope.facets = [];

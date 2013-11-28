@@ -27,7 +27,22 @@ angular.module('mui2App')
     
     
     $scope.toggleSelected = function(path) {
-
+      $scope.selectedFacet = path.getLastStep();
       $rootScope.$broadcast("facetSelected", path);
+
+      // TODO: rename... term concept already used in this context
+      var concept = facetService.createConcept(path);
+      var promise = facetService.fetchValues(concept);
+      promise.done(function(items) {
+        // empty facet values of former selected facet
+        while ($scope.facetValues.length > 0) {
+          $scope.facetValues.pop();
+        }
+        // add facet values of the currently selected facet
+        for (var i = 0; i < items.length; i++) {
+          $scope.facetValues.push(items[i]);
+        }
+        $rootScope.$apply();
+      });
     };
   });

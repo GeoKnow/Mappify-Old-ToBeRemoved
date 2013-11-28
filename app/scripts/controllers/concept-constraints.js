@@ -1,12 +1,14 @@
 'use strict';
 
 angular.module('mui2App')
-  .controller('ConceptConstraintsCtrl', function ($scope) {
+  .controller('ConceptConstraintsCtrl', function ($scope, facetService) {
     // -- settings --
     $scope.selectedFacets = [];
     $scope.activeConstrTab = 'value';
     $scope.disabledTabs = [];
-    $scope.facetValues = [
+    $scope.facetValues = [];
+
+    /*[
       {'value' : 'dbo:Castle'}, {'value' : 'dbo:Airport'},
       {'value' : 'dbo:Place'}, {'value': 'dbo:ArchitecturalStructure'},
       {'value': 765.0}, {'value': 1110.39}, {'value': 1229.0},
@@ -20,7 +22,7 @@ angular.module('mui2App')
     $scope.selectedFacetValues = [];
     $scope.minMax = [765.0, 10700.0];
     $scope.initMinMax = [765.0, 10700.0];
-
+    */
     /** facets table settings */
     $scope.facetGridOptions = {
         data: 'facets',
@@ -69,7 +71,7 @@ angular.module('mui2App')
         enableCellEdit: false,
         multiSelect: true,
         selectedItems: $scope.selectedFacetValues,
-        columnDefs: [{field: 'value', displayName: 'select values'}]
+        columnDefs: [{field: 'toString()', displayName: 'select values'}]
       };
 
     // -- ui functions --

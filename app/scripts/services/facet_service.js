@@ -45,6 +45,17 @@ angular.module('mui2App')
 
         getExpansionSet : function() {
           return expansionSet;
+        },
+
+        createConcept : function(path) {
+          return facetService.createConceptFacetValues(path);
+        },
+
+        fetchValues : function(concept) {
+          var query = Jassa.facete.ConceptUtils.createQueryList(concept);
+          var qe = qef.createQueryExecution(query);
+          var promise = Jassa.service.ServiceUtils.fetchList(qe, concept.getVar()); 
+          return promise;
         }
         
       };
