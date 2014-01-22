@@ -1,265 +1,182 @@
 'use strict';
 
-angular.module('mui2App')
-  .controller('MainCtrl', function ($scope, $compile, sparqlService, sponateService, strTemplateParser) {
-    /*
-     * event handlers
-     */
-    var markerClick = function (event) {
-      if (this.popup === null) {
-        this.popup = this.createPopup(this.closeBox);
-        map.addPopup(this.popup);
-        this.popup.show();
-      } else {
-        this.popup.toggle();
-      }
-      currentPopup = this.popup;
-      OpenLayers.Event.stop(event);
-    };
-
-    $scope.$on('mui-facets-deselect-up', function(event) {
-      event.stopPropagation();
-      $scope.$broadcast('mui-facets-deselect-down');
-    });
-
-
+angular.module('mappifyApp')
+  .controller('MainCtrl', function ($scope, mappifyConceptsService) {
     /**
-     * Facet class
+     * This is the main controller of the Mappify application. It contains all
+     * UI settings, map related settings and code managing Mappify Concepts
      */
-    var Facet = function(uri) {
-      this.uri = uri;
-      this.childFacets = [];
-      this.selected = false;
-      this.collapsed = true;
-      this.values = [];
+    
+    /* UI related settings */
+
+    $scope.fooFn = function() {
+      $('.slimscroll').slimScroll({
+          height: '100%'
+      });
     };
-    Facet.prototype = {
-      toggleSelected : function() {
-        if (this.selected === false) {
-          $scope.$emit('mui-facets-deselect-up');
-        }
-        this.selected = !this.selected;
-      },
-
-      toggleCollapsed : function() {
-        this.collapsed = !this.collapsed;
-      },
-
-      addChildFacet : function(childFacet) {
-        this.childFacets.push(childFacet);
-      },
-
-      addChildFacets : function(childFacets) {
-        var i = 0;
-        for (i; i < childFacets.length; i++) {
-          var childFacet = childFacets[i];
-          this.addChildFacet(childFacet);
-        }
-      },
-
-      getValues : function() {
-        return this.values;
-      },
-
-      setValues : function(values) {
-        this.values = values;
-      }
-    };
-
-
-    /**
-     * Concept class
-     */
-    var muiConceptIdCounter = 0;
-
-    var Concept = function() {
-        this.init();
-        this.markerImgPath = null;
-        this.sponateMapping = null;
-        this.infoTemplate = null;
-        this.query = null;
-      };
-    Concept.prototype = {
-      init : function() {
-        this.name = 'Concept ' + muiConceptIdCounter;
-        this.id = 'concept' + muiConceptIdCounter++;
-      },
-      update : function(markerImgPath, query, sponateMapping, infoTemplate) {
-        this.markerImgPath = markerImgPath;
-        this.infoTemplate = infoTemplate;
-
-        // if anything concerning the sponate mapping changed, the sponateService
-        // has to be updated:
-        if ((this.query !== null && this.query !== query)
-              || (this.sponateMapping !== null && this.sponateMapping !== sponateMapping)) {
-          delete sponateService[this.id];
-          var service = sponateService.service;
-          var prefixes = sponateService.context.getPrefixMap().getJson();
-          sponateService.initialize(service, prefixes);
-        }
-
-        this.infoTemplate = infoTemplate;
-        this.query = query;
-        this.sponateMapping = sponateMapping;
-        // TODO: add error handling!!!
-        sponateService.addMap({
-            'name' : this.id,
-            // TODO: use eval instead of JSON.parse
-            'template' : [ JSON.parse(sponateMapping) ],
-            'from' : query
-          });
-
-        console.log('Concept ' + this.name + ' updated');
-      },
-
-      showOnMap : function() {
-        console.log('showOnMap called for ' + this.name);
-        if (this.sponateMapping === null) {
-          console.log('[WARN] concept ' + this.name + ' has no saved sponate mapping. Skipping...');
-        } else {
-          var res = sponateService[this.id].find().asList();
-          var concept = this;
-
-          // show results on map
-          res.done(function(queryResults) {
-            // general setup of markers parameters
-            var size = new OpenLayers.Size(40,40);
-            var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
-            var popupSize = new OpenLayers.Size(1000,1000);
-            var layerName = 'mui-markers-' + concept.id;
-            var markerLayers = map.getLayersByName('mui-markers');
-            for (var i = 0; i < markerLayers.length; i++) {
-              var layer = markerLayers[i];
-              map.removeLayer(layer);
-            }
-            var markers = new OpenLayers.Layer.Markers(layerName);
-            map.addLayer(markers);
-            //map.setLayerIndex(markers, 99);
-
-            for (var i = 0; i < queryResults.length; i++) {
-              var res = queryResults[i];
-              var long = res.long;
-              var lat = res.lat;
-              var longLat = new OpenLayers.LonLat(long, lat).transform(
-                  new OpenLayers.Projection('EPSG:4326'), new OpenLayers.Projection('EPSG:900913'));
-              
-              var feature = new OpenLayers.Feature(markers, longLat);
-
-              feature.closeBox = true;
-              feature.popupClass = OpenLayers.Class(OpenLayers.Popup.FramedCloud, {
-                  'autoSize': true,
-                  'maxSize': popupSize
-                });
-
-              feature.data.overflow = 'auto';
-              feature.data.popupContentHTML = strTemplateParser.resolve(
-                  concept.infoTemplate, res);
-              feature.data.icon = new OpenLayers.Icon(concept.markerImgPath, size, offset);
-              var marker = feature.createMarker();
-              marker.events.register('mousedown', feature, markerClick);
-              markers.addMarker(marker);
-            }
-          });
-        }
-      }
-    };
-
-
-    /*
-     * settings
-     */
-    $scope.concepts = [];
-    // even though there can only be one selected concept (or none) a list is expected
-    $scope.selectedConcepts = [];
-    $scope.facets = [];
-    /*
-     * Dummy facet initialization
-     * tree should look sth like this:
-     * rdf:type
-     *   |- dbpprop:name
-     *   |    `- rdfs:label
-     *   |- dcterms:subject
-     *   |- rdfs:label
-     *   |- dbpedia-owl:location
-     *   |    `- rdfs:label
-     *   |- dbpprop:latitude
-     *   `- dbpprop:longitude
-     */
-    // create dbpprop:name
-    var dbpName_rdfsLabel = new Facet('rdfs:label');
-    var dbpName = new Facet('dbp:name');
-    dbpName.addChildFacet(dbpName_rdfsLabel);
-    // create dcterms:subject
-    var dctermsSubject = new Facet('dcterms:subject');
-    // create rdfs:label
-    var rdfsLabel = new Facet('rdfs:label');
-    // create dbpedia-owl:location
-    var dboLocation_rdfsLabel = new Facet('rdfs:label');
-    var dboLocation = new Facet('dbo:location');
-    dboLocation.addChildFacet(dboLocation_rdfsLabel);
-    // create dbpprop:latitude
-    var dbpLatitude = new Facet('dbp:latitude');
-    // create dbpprop:longitude
-    var dbpLongitude = new Facet('dbp:longitude');
-    // create dbo:runwayLength
-    var dboRunwayLength = new Facet('dbo:runwayLength');
-    // add all facets to root facet rdf:type
-    var rdfType = new Facet('rdf:type');
-    rdfType.addChildFacets([dbpName, dctermsSubject, rdfsLabel, dboLocation, dbpLatitude, dbpLongitude, dboRunwayLength]);
-    $scope.facets.push(rdfType);
-
-    /*
-     * ui-related settings
-     */
-    /** method to check if the delete button should be shown */
+    $scope.$on('$viewContentLoaded', $scope.fooFn);
+    
+    // Mappify Concept grid
+    $scope.selectedMappifyConcepts = [];
     $scope.selectionMade = function() {
-      return $scope.selectedConcepts.length > 0;
+      return $scope.selectedMappifyConcepts.length > 0;
     };
-    $scope.activeTab = 'constraints';
-
-    /** concepts table settings */
+    $scope.mcs = mappifyConceptsService.getConcepts();
     $scope.conceptGridOptions = {
-        data : 'concepts',
+        data : 'mcs',
         enableCellSelection : true,
         enableRowSelection : true,
         enableCellEdit : true,
         multiSelect : false,
-        selectedItems : $scope.selectedConcepts,
-        columnDefs : [{field : 'name', displayName : 'concepts', enableCellEdit : true}],
+        selectedItems : $scope.selectedMappifyConcepts,
+        columnDefs : [{
+          field : 'name',
+          displayName : 'concepts',
+          enableCellEdit : true}],
         afterSelectionChange : function(rowItem) {
-          /* this function will be called twice when selecting a new row item:
-           * once for unselecting the 'old' item and again for selecting the
-           * new item. And I'm only interested in the second case.
+          /* This function will be called twice when selecting a new row item:
+           * Once for un-selecting the 'old' item and again for selecting the
+           * new item. And I'm only interested in the latter case.
            */
           if (rowItem.selected) {
-            // rowItem.entity.getFacets();
-            $scope.$broadcast('mui-concept-selection-changed');
+            $scope.$broadcast('mappify-concept-selection-changed');
           }
         }
-      };
-
-    /** concept settings table settings */
-    $scope.constraints = [{'text': 'rdf:type = dbo:Castle'}];
-    $scope.conceptSettingsGridOptions = {
-        data : 'constraints',
-        enableCellSelection : true,
-        enableRowSelection : true,
-        multiSelect : false,
-        columnDefs : [{field : 'text', displayName : 'constraints', enableCellEdit : true}]
     };
-    /*
-     * scope functions
-     */
-    // concept-related
+    
+    
+    $scope.activeTab = 'filter';
+    $scope.getTabClass = function(tabName) {
+      if($scope.activeTab === tabName) {
+        return 'mappify-control-tab-active';
+      } else {
+        return undefined;
+      }
+    }
+    
+    /* map related settings */
+    
+    // call map initialization
+    init();
+    map.setCenter(
+        //  8.85, 53.08  (10.3) --> Bremen
+        // 12.35, 51.35  (10)   --> Leipzig
+        new OpenLayers.LonLat(8.85, 53.08).transform(
+            new OpenLayers.Projection('EPSG:4326'),
+            map.getProjectionObject()),
+        4
+    );
+    
+    // -- layers for initial and maximal map section --
+    var initBoxLayer = new OpenLayers.Layer.Vector('initial box', {
+      styleMap: new OpenLayers.StyleMap({
+        fillColor: '#00FF00', fillOpacity: 0.2 })
+      });
+    
+    var maxBoxLayer = new OpenLayers.Layer.Vector('maximal box', {
+      styleMap: new OpenLayers.StyleMap({
+        fillColor: '#FF0000', fillOpacity: 0.15 })
+    });
+    
+    map.addLayer(initBoxLayer);
+    map.addLayer(maxBoxLayer);
+    
+    $scope.initBoxDrawCtrl = new OpenLayers.Control.DrawFeature(initBoxLayer,
+        OpenLayers.Handler.RegularPolygon,
+        { handlerOptions: { sides: 4, irregular: true } }
+    );
+    map.addControl($scope.initBoxDrawCtrl);
+
+    $scope.maxBoxDrawCtrl = new OpenLayers.Control.DrawFeature(maxBoxLayer,
+        OpenLayers.Handler.RegularPolygon,
+        { handlerOptions: { sides: 4, irregular: true } }
+    );
+    map.addControl($scope.maxBoxDrawCtrl);
+    
+    $scope.initBtn = {
+        'active': false,
+        'coords': null
+    };
+    $scope.maxBtn = {
+        'active': false,
+        'coords': null
+    };
+    
+    $scope.toggleInitBoxDraw = function() {
+      if ($scope.initBtn.active) {
+        $scope.initBtn.active = false;
+        if(!$scope.$$phase) {
+          $scope.$apply();
+        }
+        $scope.initBoxDrawCtrl.deactivate();
+      } else {
+        $scope.initBtn.active = true;
+        $scope.initBoxDrawCtrl.activate();
+        // deactivate other button
+        $scope.maxBtn.active = false;
+        $scope.maxBoxDrawCtrl.deactivate();
+      }
+    };
+    
+    $scope.toggleMaxBoxDraw = function() {
+      if ($scope.maxBtn.active) {
+        $scope.maxBtn.active = false;
+        if(!$scope.$$phase) {
+          $scope.$apply();
+        }
+        $scope.maxBoxDrawCtrl.deactivate();
+      } else {
+        $scope.maxBtn.active = true;
+        $scope.maxBoxDrawCtrl.activate();
+        // deactivate other button
+        $scope.initBtn.active = false;
+        $scope.initBoxDrawCtrl.deactivate();
+      }
+    };
+    
+    // event listener to prevent the drawing of multiple rectangles
+    $scope.featureRemover = function(event) {
+      event.object.removeAllFeatures();
+    };
+    
+    initBoxLayer.events.register('beforefeatureadded',
+        initBoxLayer, $scope.featureRemover);
+    initBoxLayer.events.register('featureadded',
+        initBoxLayer, $scope.toggleInitBoxDraw);
+    
+    maxBoxLayer.events.register('beforefeatureadded',
+        maxBoxLayer, $scope.featureRemover);
+    maxBoxLayer.events.register('featureadded',
+        maxBoxLayer, $scope.toggleMaxBoxDraw);
+    
+
+    // event listener to get the current values of the box coords
+    $scope.coordListener = function(event) {
+      var geometry = event.feature.geometry;
+      if (event.object.name === 'initial box') {
+        $scope.initBtn.coords = geometry;
+      } else if (event.object.name === 'maximal box') {
+        $scope.maxBtn.coords = geometry;
+      }
+    };
+    initBoxLayer.events.register('featureadded',
+        initBoxLayer, $scope.coordListener);
+    maxBoxLayer.events.register('featureadded',
+        maxBoxLayer, $scope.coordListener);
+
+    
+    /* Mappify Concept handling */
     $scope.createConcept = function() {
-      $scope.concepts.push(new Concept());
+      mappifyConceptsService.addConcept();
     };
-
+    
     $scope.deleteConcept = function() {
-      var idx = $scope.concepts.indexOf($scope.selectedConcepts[0]);
-      $scope.facets = [];
-      $scope.concepts.splice(idx, 1);
-      $scope.selectedConcepts.splice(0,1);
-      $scope.$broadcast('conceptDeleted');
+      mappifyConceptsService.deleteConcept($scope.selectedMappifyConcepts[0]);
+      $scope.selectedMappifyConcepts.splice(0,1);
+      $scope.$broadcast('mappify-concept-deleted');
+    };
+    /* debug */
+    $scope.dummyFn = function() {
+      console.log('dummy function called');
     };
   });

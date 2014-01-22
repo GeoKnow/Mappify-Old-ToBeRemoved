@@ -1,52 +1,40 @@
-div#mui-tab-content-ui {
-  height: 11em
-}
-
-div#mui-marker {
-  float: left;
-}
-
-
-div#mui-marker.gridStyle {
-    width: 7em !important; 
-}
-
-div#mui-marker input {
-  margin-top: 
+#mappify-marker-preview {
+  background-color: #FFF;
+  height: 60px;
+  width: 80px;
+  padding: 10px;
+  text-align: center;
   vertical-align: middle;
-}
-
-div#mui-query {
-  float: left;
-  margin-left: 1em;
-  margin-bottom: 0;
-  width: 12em;
-  height: 10em;
-}
-
-div#mui-query textarea, div#mui-sponate textarea, div#mui-template textarea{
-  width: 13em;
-  height: 10em;
-}
-
-div#mui-template-vars {
-  height: 10em;
   float: left;
 }
 
-div#mui-sponate {
-  height: 10em;
-  width: 13em;
-  float:left;
-  margin-left: 1em;
+#mappify-marker-preview div {
+  padding-top: 5px;
 }
 
-div#mui-template {
-  float: left;
-  height: 10em;
+#mappify-marker-preview span {
+    font-size: 80%;
 }
 
-button.mui-ui-save {
-  margin-top: 10em;
-  margin-left: 20px;
+#mappify-set-marker {
+  margin-left: 10em;
+}
+
+.modal {
+  display: block; 
+}
+
+#mappify-sponate-query {
+  clear: both;
+}
+
+.mappify-textarea-heading {
+  padding-top: 1em;
+  padding-bottom: 0.5em;
+  color: #FFF;
+}
+
+div#mappify-sponate-query textarea, div#mappify-sponate-mapping textarea, div#mappify-info-template textarea{
+  width: 21em;
+  height: 12em;
 }

@@ -1,0 +1,13 @@
+<div class="modal-header">Please select a marker</div>
+<div class="modal-body">
+    <span ng-repeat="path in markerPaths">
+        <input type="radio" name="markers"
+                ng-model="$parent.selectedMarkerPath.selected"
+                value="{{path}}" />
+        <img src="{{path}}" />
+    </span>
+</div>
+<div class="modal-footer">
+    <button class="btn btn-primary" ng-click="ok()">OK</button>
+    <button class="btn btn-primary" ng-click="cancel()">Cancel</button>
+</div>

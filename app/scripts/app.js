@@ -1,6 +1,13 @@
 'use strict';
 
-angular.module('mui2App', ['ui.bootstrap', 'ngGrid', 'ui.slider'])
+angular.module('mappifyApp', [
+  'ngCookies',
+  'ngResource',
+  'ngSanitize',
+  'ngRoute',
+  'ui.bootstrap',
+  'ngGrid'
+])
   .config(function ($routeProvider) {
     $routeProvider
       .when('/', {

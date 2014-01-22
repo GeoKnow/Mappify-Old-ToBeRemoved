@@ -1,66 +1,96 @@
-body {
-    width: 100% !important;
-    background: #fafafa;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    color: #333;
-}
-html {
-    width: 100% !important;
+#mappify-controls {
+  background : url("../images/background.png") repeat scroll 0 0 rgba(0, 0, 0, 0);
+  display : block;
+  position : absolute;
+  height : calc(100% - 110px);
+  top : 110px;
+  left : 0;
+  width : 23em;
+  border-radius: 0px 6px 0px 0px;
+  overflow : auto;
 }
 
-div.container {
-    margin: 0 !important;
-    padding: 0 50px !important;
-    width: calc(100% - 100px) !important;
+#mappify-controls div.slimscroll {
+  height : calc(100% - 110px);
+}
+
+#mappify-settings-controls {
+  margin-left : 10px;
+  position : relative;
+/*   top : 1em; */
+}
+
+.mappify-control-tab {
+  border : 1px solid #FFF;
+  border-radius : 6px 6px 0px 0px;
+/*   padding : 2px 5px 0px 5px; */
+  padding : 0;
+  margin-left : 15px;
+  
+/*   background-color : #EAEAEA; */
+}
+
+.mappify-control-tab a {
+  margin : 0 !important;
+  
+}
+
+.mappify-control-tab-active {
+  background-color : #EAEAEA;
+}
+
+.mappify-control-tab a:hover {
+  background-color : #49AFCD !important;
+}
+
+#map {
+  width : 100%;
+  height : 100%;
+  position : absolute;
+  left : 0;
+  top : 0;
+  z-index : -9999;
+}
+
+#mappify-concepts-grid {
+  width : 21em;
+  height : 20em;
+  position : relative;
+  left : 10px;
+  top : 30px;
+  overflow : auto;
 }
 
 .gridStyle {
     border: 1px solid rgb(212,212,212);
-    width: 15em; 
+    width: 20em; 
     height: 10em;
 }
 
-.clear-float{
-    clear: both;
+#mappify-concepts-grid-buttons {
+  margin-top: 10px;
 }
 
-div#mui-main {
-    width: 90%;
-    height: calc(10.2em + 100px + 300px);
-    margin: 50px 0;
-    font-size: 18px;
-    font-weight: 200;
-    line-height: 30px;
-    background-color: #eee;
-    border-radius: 6px;
-    padding: 60px;
+#mappify-concepts-grid-buttons button {
+  width : 35px;
 }
 
-#mui-main div#mui-concepts {
-    width: 15.1em;
-    float: left;
-    overflow: auto;
+.map-sec-btn {
+  width : 17em;
 }
 
-ul.mui-tabs-right-style {
-    margin-top: 5.5em;
-    margin-right: 5px !important;
-    border: 0px hidden !important;
-}
-li.mui-tabs-right-style {
-    border: solid;
-    border-width: 1px 1px 1px 0 !important;
-    border-color: rgb(212,212,212);
-    border-radius: 0px 6px 6px 0px;
-    margin: 0px 5px 5px 0px;
-    padding: 10px 10px 0px 10px;
-}
-li.mui-tabs-right-style a {
-    padding: 0 !important;
-    margin-top: 0 !important;
-    min-width: 0 !important;
+#map-sec-init {
+  position : absolute;
+  left : calc( 10px + 3em );
+  top : 10px;
 }
 
-hr.map-delimiter {
-    margin: 20px 40px;
+#map-sec-max {
+  position : absolute;
+  left : calc( 10px + 3em );
+  top : 50px;
+}
+
+.tab-content {
+  height: 100%;
 }

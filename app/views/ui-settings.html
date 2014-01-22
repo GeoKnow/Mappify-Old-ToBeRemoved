@@ -1,28 +1,19 @@
-<div id="mui-tab-content-ui">
-  <div id="mui-marker" class="gridStyle" ng-grid="markerGridOptions"></div>
-  <div id="mui-query">
-    <div>attribute SPARQL query</div>
-    <textarea ng-model="query" ng-change="updateQueryStatus(query)"></textarea>
-  </div>
-  <div id="mui-template-vars">
-    <div>variables</div>
-    <ul>
-      <li ng-repeat="var in queryVars()">{{var}}</li>
-    </ul>
-  </div>
-  <div id="mui-sponate">
-    <div>sponate mapping 
-      <span ng-switch="validJSON(sponateMapping)">
-        <i ng-switch-when="false" class="icon-remove-sign"/>
-        <i ng-switch-when="true" class="icon-ok-sign"/>
-      </span>
+<div id="mappify-ui-settings">
+    <div id="mappify-marker-preview">
+        <div ng-show="markerSelected()">
+            <img id="mappify-marker-img" 
+                    src="{{markerFilePath}}">
+        </div>
+        <span ng-show="!markerSelected()">No marker selected</span>
     </div>
-    <textarea ng-model="sponateMapping" ng-change="updateMappingStatus(sponateMapping)"></textarea>
-  </div>
-  <div id="mui-template">
-    <div>pop-over template</div>
-    <textarea ng-model="infoTemplate" ng-change="updateTemplateStatus(infoTemplate)"></textarea>
-  </div>
-  <button disabled ng-show="!uiSettingsComplete()" class="btn mui-ui-save">save</button>
-  <button ng-click="saveUiSettings()" ng-show="uiSettingsComplete()" class="btn btn-success mui-ui-save">save</button>
+    <div id="mappify-set-marker">
+        <button class="btn btn-info" ng-click="open()">set marker</button>
+    </div>
+    
+    <div id="mappify-sponate-query">
+        <div class="mappify-textarea-heading">SPONATE attribute SPARQL query</div>
+        <textarea ng-model="sponateQuery"
+                ng-change="updateQueryStatus(sponateQuery)">
+        </textarea>
+    </div>
 </div>
