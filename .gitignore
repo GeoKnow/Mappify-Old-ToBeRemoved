@@ -3,4 +3,5 @@ node_modules
 dist
 .tmp
 .sass-cache
+.project
 app/bower_components
