@@ -16,4 +16,9 @@
                 ng-change="updateQueryStatus(sponateQuery)">
         </textarea>
     </div>
+    
+    <div id="mapify-sponate-variables">
+        <div class="mappify-textarea-heading">available variables</div>
+        <span class="mappify-sponate-query-var" ng-repeat="var in queryVars()">{{var}}</span>
+    </div>
 </div>

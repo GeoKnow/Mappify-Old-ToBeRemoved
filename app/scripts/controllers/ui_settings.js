@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('mappifyApp')
-  .controller('UiSettingsCtrl', function($scope, $modal) {
+  .controller('UiSettingsCtrl', function($scope, $modal, mappifyConceptsService) {
     
     /** marker settings */
     $scope.markerFilePath = null;
@@ -24,14 +24,42 @@ angular.module('mappifyApp')
     
     
     /** SPONATE query settings */
-    $scope.sponateQuery =
+    var demoQuery =
       'SELECT * WHERE {\n' + 
         '    ?r rdfs:label ?label .\n' +
         '    ?r foaf:depiction ?d .\n' +
         '    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .\n' +
         '    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .}';
+    
+    $scope.$on('mappify-concept-selection-changed', function() {
+      var sponateQuery = mappifyConceptsService.getSponateQuery(
+          $scope.selectedMappifyConcepts[0]);
+      if (sponateQuery == null) {
+        $scope.sponateQuery = demoQuery;
+      } else {
+        $scope.sponateQuery = sponateQuery;
+      }
+      
+      $scope.markerFilePath = mappifyConceptsService.getMarkerIconPath(
+          $scope.selectedMappifyConcepts[0]);
+    });
+    
+    
     $scope.updateQueryStatus = function(query) {
       $scope.sponateQuery = query;
+    };
+    
+    $scope.queryVars = function() {
+      var regex = /(\?)([a-zA-Z][a-zA-Z_0-9_-]*)/g;
+      var matches = [];
+      var match;
+      while (match = regex.exec($scope.sponateQuery)) {
+        var res = match[2];
+        if (matches.indexOf(res) === -1) {
+          matches.push(res);
+        }
+      }
+      return matches;
     };
   });
 

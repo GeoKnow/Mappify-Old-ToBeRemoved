@@ -7,14 +7,16 @@ angular.module('mappifyApp')
      * UI settings, map related settings and code managing Mappify Concepts
      */
     
-    /* UI related settings */
-
-    $scope.fooFn = function() {
+    /*
+     * UI related settings
+     * ========================================================================
+     */
+    $scope.slimScrollInit = function() {
       $('.slimscroll').slimScroll({
           height: '100%'
       });
     };
-    $scope.$on('$viewContentLoaded', $scope.fooFn);
+    $scope.$on('$viewContentLoaded', $scope.slimScrollInit);
     
     // Mappify Concept grid
     $scope.selectedMappifyConcepts = [];
@@ -44,7 +46,6 @@ angular.module('mappifyApp')
         }
     };
     
-    
     $scope.activeTab = 'filter';
     $scope.getTabClass = function(tabName) {
       if($scope.activeTab === tabName) {
@@ -52,9 +53,13 @@ angular.module('mappifyApp')
       } else {
         return undefined;
       }
-    }
+    };
     
-    /* map related settings */
+    
+    /*
+     * map related settings
+     * ========================================================================
+     */
     
     // call map initialization
     init();
@@ -101,6 +106,53 @@ angular.module('mappifyApp')
         'active': false,
         'coords': null
     };
+    
+    /*
+     * <demo-initialization>
+     * ========================================================================
+     */
+    // init area
+    var pi1 = new OpenLayers.Geometry.Point(-365006.1740580802, 5608490.0595113);
+    var pi2 = new OpenLayers.Geometry.Point(-365006.1740580802, 7232624.036288699);
+    var pi3 = new OpenLayers.Geometry.Point(2129898.4288228005, 7232624.036288701);
+    var pi4 = new OpenLayers.Geometry.Point(2129898.4288228005, 5608490.0595113);
+    var ri = new OpenLayers.Geometry.LinearRing([pi1, pi2, pi3, pi4, pi1]);
+    var poli = new OpenLayers.Geometry.Polygon(ri);
+    $scope.initBtn.coords = poli;
+    
+    var feati = new OpenLayers.Feature.Vector(poli, {});
+    initBoxLayer.addFeatures([feati]);
+    
+    // max area
+    var pm1 = new OpenLayers.Geometry.Point(-1646702.2641655002, 5001885.803124601);
+    var pm2 = new OpenLayers.Geometry.Point(-1646702.2641655002, 7937067.6888668);
+    var pm3 = new OpenLayers.Geometry.Point(3587705.4320746996, 7937067.6888668);
+    var pm4 = new OpenLayers.Geometry.Point(3587705.4320747014, 5001885.803124601);
+    var rm = new OpenLayers.Geometry.LinearRing([pm1, pm2, pm3, pm4, pm1]);
+    var polm = new OpenLayers.Geometry.Polygon(rm);
+    $scope.maxBtn.coords = polm;
+
+    var featm = new OpenLayers.Feature.Vector(polm, {});
+    maxBoxLayer.addFeatures([featm]);
+    
+    var demoConcept = mappifyConceptsService.createAndAddConcept('Demo');
+    var query =
+      'PREFIX dbo: <http://dbpedia.org/ontology/> \n' +
+      'PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> \n' +
+      'PREFIX foaf: <http://xmlns.com/foaf/0.1/> \n' +
+      'SELECT * {\n' +
+      '  ?r a dbo:Castle . \n' +
+      '  ?r rdfs:label ?label . \n' +
+      '  ?r foaf:depiction ?d . \n' +
+      '  ?r geo:long ?long . \n' +
+      '  ?r geo:lat ?lat . \n' +
+      '}';
+    mappifyConceptsService.setSponateQuery(demoConcept, query);
+    mappifyConceptsService.setMarkerIconPath(
+        demoConcept, 'images/markers/castle-2.png');
+    /*
+     * </demo-initialization>
+     */
     
     $scope.toggleInitBoxDraw = function() {
       if ($scope.initBtn.active) {
@@ -163,9 +215,12 @@ angular.module('mappifyApp')
         initBoxLayer, $scope.coordListener);
     maxBoxLayer.events.register('featureadded',
         maxBoxLayer, $scope.coordListener);
-
     
-    /* Mappify Concept handling */
+    
+    /*
+     * Mappify Concept handling
+     * ========================================================================
+     */
     $scope.createConcept = function() {
       mappifyConceptsService.addConcept();
     };
@@ -175,7 +230,12 @@ angular.module('mappifyApp')
       $scope.selectedMappifyConcepts.splice(0,1);
       $scope.$broadcast('mappify-concept-deleted');
     };
-    /* debug */
+    
+    
+    /*
+     * debug
+     * ========================================================================
+     */
     $scope.dummyFn = function() {
       console.log('dummy function called');
     };

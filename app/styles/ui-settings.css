@@ -9,7 +9,7 @@
 }
 
 #mappify-marker-preview div {
-  padding-top: 5px;
+  padding-top: 3px;
 }
 
 #mappify-marker-preview span {
@@ -32,9 +32,17 @@
   padding-top: 1em;
   padding-bottom: 0.5em;
   color: #FFF;
+  font-style: bold !important;
 }
 
 div#mappify-sponate-query textarea, div#mappify-sponate-mapping textarea, div#mappify-info-template textarea{
   width: 21em;
-  height: 12em;
+  height: 17em;
+/*   font-size: 9pt; */
+}
+
+.mappify-sponate-query-var {
+  color: #FFF;
+  margin-right: 1em;
+  font-style: italic;
 }

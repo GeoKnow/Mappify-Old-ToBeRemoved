@@ -25,22 +25,36 @@
         
         <div id="mappify-settings-controls" class="tabbable tabs-top">
             <ul class="nav nav-tabs">
-                <li class="mappify-control-tab" ng-class="getTabClass('filter')">
+                <li ng-show="selectionMade()" class="mappify-control-tab"
+                        ng-class="getTabClass('filter')">
                     <a ng-click="activeTab='filter'"><i class="icon-filter"/></a>
                 </li>
-                <li class="mappify-control-tab" ng-class="getTabClass('ui')">
+                <li ng-show="!selectionMade()"
+                        class="mappify-control-tab mappify-deactivated-tab"
+                        ng-class="getTabClass('filter')">
+                    <a><i class="icon-filter"/></a>
+                </li>
+                <li ng-show="selectionMade()" class="mappify-control-tab"
+                        ng-class="getTabClass('ui')">
                     <a ng-click="activeTab='ui'"><i class="icon-comment"/></a>
+                </li>
+                <li ng-show="!selectionMade()"
+                        class="mappify-control-tab mappify-deactivated-tab"
+                        ng-class="getTabClass('ui')">
+                    <a><i class="icon-comment"/></a>
                 </li>
             </ul>
             <div class="tab-content">
-            
+	            <div ng-show="activeTab=='filter' && selectionMade()">dummy</div>
             </div>
-                <div ng-show="activeTab=='filter'">dummy</div>
             <div class="tab-content">
-                <div ng-show="activeTab=='ui'" ng-controller="UiSettingsCtrl">
+                <div ng-show="activeTab=='ui' && selectionMade()" ng-controller="UiSettingsCtrl">
                     <div ng-include="'views/ui-settings.html'"></div>
                 </div>
             </div>
+            <div ng-show="!selectionMade()" class="tab-content"><span class="mappify-info">
+                no selection made
+            </span></div>
         </div>
         </div>
     </div>
