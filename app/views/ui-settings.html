@@ -17,8 +17,22 @@
         </textarea>
     </div>
     
-    <div id="mapify-sponate-variables">
-        <div class="mappify-textarea-heading">available variables</div>
+    <div id="mapify-sponate-variables" class="mappify-settings-bottomrule">
+        <div class="mappify-textarea-info">available variables:</div>
         <span class="mappify-sponate-query-var" ng-repeat="var in queryVars()">{{var}}</span>
+    </div>
+    
+    <div id="mappify-sponate-mapping" class="mappify-settings-bottomrule">
+        <div class="mappify-textarea-heading">SPONATE mapping</div>
+        <textarea ng-model="sponateMapping"
+                ng-change="updateSponateMappingStatus(sponateMapping)">
+        </textarea>
+    </div>
+    
+    <div id="mappify-info-template">
+        <div class="mappify-textarea-heading">Info template</div>
+        <textarea ng-model="infoTemplate"
+                ng-change="updateInfoTemplateStatus(infoTemplate)">
+        </textarea>
     </div>
 </div>

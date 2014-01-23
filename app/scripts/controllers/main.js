@@ -19,9 +19,9 @@ angular.module('mappifyApp')
     $scope.$on('$viewContentLoaded', $scope.slimScrollInit);
     
     // Mappify Concept grid
-    $scope.selectedMappifyConcepts = [];
+    $scope.selectedMappifyConcept = null;
     $scope.selectionMade = function() {
-      return $scope.selectedMappifyConcepts.length > 0;
+      return $scope.selectedMappifyConcept !== null;
     };
     $scope.mcs = mappifyConceptsService.getConcepts();
     $scope.conceptGridOptions = {
@@ -30,7 +30,6 @@ angular.module('mappifyApp')
         enableRowSelection : true,
         enableCellEdit : true,
         multiSelect : false,
-        selectedItems : $scope.selectedMappifyConcepts,
         columnDefs : [{
           field : 'name',
           displayName : 'concepts',
@@ -43,10 +42,15 @@ angular.module('mappifyApp')
           if (rowItem.selected) {
             $scope.$broadcast('mappify-concept-selection-changed');
           }
+        },
+        beforeSelectionChange: function(rowItem) {
+          $scope.$broadcast('mappify-concept-selection-will-change');
+          $scope.selectedMappifyConcept = rowItem.entity;
+          return true;
         }
     };
     
-    $scope.activeTab = 'filter';
+    $scope.activeTab = 'ui';
     $scope.getTabClass = function(tabName) {
       if($scope.activeTab === tabName) {
         return 'mappify-control-tab-active';
@@ -107,52 +111,6 @@ angular.module('mappifyApp')
         'coords': null
     };
     
-    /*
-     * <demo-initialization>
-     * ========================================================================
-     */
-    // init area
-    var pi1 = new OpenLayers.Geometry.Point(-365006.1740580802, 5608490.0595113);
-    var pi2 = new OpenLayers.Geometry.Point(-365006.1740580802, 7232624.036288699);
-    var pi3 = new OpenLayers.Geometry.Point(2129898.4288228005, 7232624.036288701);
-    var pi4 = new OpenLayers.Geometry.Point(2129898.4288228005, 5608490.0595113);
-    var ri = new OpenLayers.Geometry.LinearRing([pi1, pi2, pi3, pi4, pi1]);
-    var poli = new OpenLayers.Geometry.Polygon(ri);
-    $scope.initBtn.coords = poli;
-    
-    var feati = new OpenLayers.Feature.Vector(poli, {});
-    initBoxLayer.addFeatures([feati]);
-    
-    // max area
-    var pm1 = new OpenLayers.Geometry.Point(-1646702.2641655002, 5001885.803124601);
-    var pm2 = new OpenLayers.Geometry.Point(-1646702.2641655002, 7937067.6888668);
-    var pm3 = new OpenLayers.Geometry.Point(3587705.4320746996, 7937067.6888668);
-    var pm4 = new OpenLayers.Geometry.Point(3587705.4320747014, 5001885.803124601);
-    var rm = new OpenLayers.Geometry.LinearRing([pm1, pm2, pm3, pm4, pm1]);
-    var polm = new OpenLayers.Geometry.Polygon(rm);
-    $scope.maxBtn.coords = polm;
-
-    var featm = new OpenLayers.Feature.Vector(polm, {});
-    maxBoxLayer.addFeatures([featm]);
-    
-    var demoConcept = mappifyConceptsService.createAndAddConcept('Demo');
-    var query =
-      'PREFIX dbo: <http://dbpedia.org/ontology/> \n' +
-      'PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> \n' +
-      'PREFIX foaf: <http://xmlns.com/foaf/0.1/> \n' +
-      'SELECT * {\n' +
-      '  ?r a dbo:Castle . \n' +
-      '  ?r rdfs:label ?label . \n' +
-      '  ?r foaf:depiction ?d . \n' +
-      '  ?r geo:long ?long . \n' +
-      '  ?r geo:lat ?lat . \n' +
-      '}';
-    mappifyConceptsService.setSponateQuery(demoConcept, query);
-    mappifyConceptsService.setMarkerIconPath(
-        demoConcept, 'images/markers/castle-2.png');
-    /*
-     * </demo-initialization>
-     */
     
     $scope.toggleInitBoxDraw = function() {
       if ($scope.initBtn.active) {
@@ -221,15 +179,24 @@ angular.module('mappifyApp')
      * Mappify Concept handling
      * ========================================================================
      */
+    $scope.sponateMapping = null;
+    $scope.infoTemplate = null;
+    $scope.sponateQuery = null;
+    $scope.markerFilePath = null;
+    
     $scope.createConcept = function() {
       mappifyConceptsService.addConcept();
     };
     
     $scope.deleteConcept = function() {
-      mappifyConceptsService.deleteConcept($scope.selectedMappifyConcepts[0]);
-      $scope.selectedMappifyConcepts.splice(0,1);
+      mappifyConceptsService.deleteConcept($scope.selectedMappifyConcept);
+      $scope.selectedMappifyConcept = null;
       $scope.$broadcast('mappify-concept-deleted');
     };
+    
+    $scope.$on('mappify-concept-selection-will-change', function() {
+      mappifyConceptsService.saveCurrentValues($scope);
+    });
     
     
     /*
@@ -239,4 +206,61 @@ angular.module('mappifyApp')
     $scope.dummyFn = function() {
       console.log('dummy function called');
     };
+    
+    
+    /*
+     * <demo-initialization>
+     * ========================================================================
+     */
+    // init area
+    var pi1 = new OpenLayers.Geometry.Point(-365006.1740580802, 5608490.0595113);
+    var pi2 = new OpenLayers.Geometry.Point(-365006.1740580802, 7232624.036288699);
+    var pi3 = new OpenLayers.Geometry.Point(2129898.4288228005, 7232624.036288701);
+    var pi4 = new OpenLayers.Geometry.Point(2129898.4288228005, 5608490.0595113);
+    var ri = new OpenLayers.Geometry.LinearRing([pi1, pi2, pi3, pi4, pi1]);
+    var poli = new OpenLayers.Geometry.Polygon(ri);
+    $scope.initBtn.coords = poli;
+    
+    var feati = new OpenLayers.Feature.Vector(poli, {});
+    initBoxLayer.addFeatures([feati]);
+    
+    // max area
+    var pm1 = new OpenLayers.Geometry.Point(-1646702.2641655002, 5001885.803124601);
+    var pm2 = new OpenLayers.Geometry.Point(-1646702.2641655002, 7937067.6888668);
+    var pm3 = new OpenLayers.Geometry.Point(3587705.4320746996, 7937067.6888668);
+    var pm4 = new OpenLayers.Geometry.Point(3587705.4320747014, 5001885.803124601);
+    var rm = new OpenLayers.Geometry.LinearRing([pm1, pm2, pm3, pm4, pm1]);
+    var polm = new OpenLayers.Geometry.Polygon(rm);
+    $scope.maxBtn.coords = polm;
+
+    var featm = new OpenLayers.Feature.Vector(polm, {});
+    maxBoxLayer.addFeatures([featm]);
+    $scope.toggleMaxBoxDraw();
+    
+    var demoConcept = mappifyConceptsService.createAndAddConcept('Demo');
+    var query =
+      'PREFIX dbo: <http://dbpedia.org/ontology/> \n' +
+      'PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> \n' +
+      'PREFIX foaf: <http://xmlns.com/foaf/0.1/> \n' +
+      'SELECT * {\n' +
+      '  ?r a dbo:Castle . \n' +
+      '  ?r rdfs:label ?label . \n' +
+      '  ?r foaf:depiction ?d . \n' +
+      '  ?r geo:long ?long . \n' +
+      '  ?r geo:lat ?lat . \n' +
+      '}';
+    mappifyConceptsService.setSponateQuery(demoConcept, query);
+    mappifyConceptsService.setMarkerIconPath(
+        demoConcept, 'images/markers/castle-2.png');
+    
+    var demoSponateMapping =
+      '{id: "?r", \n' +
+      ' name : "?label",\n' + 
+      ' pic: "?d",\n' +
+      ' lat: "?lat",\n' +
+      ' long: "?long"}';
+    mappifyConceptsService.setSponateMapping(demoConcept, demoSponateMapping);
+    
+    var demoInfoTemplate = '{{name}}\n<img src="{{pic}}">';
+    mappifyConceptsService.setInfoTemplate(demoConcept, demoInfoTemplate);
   });

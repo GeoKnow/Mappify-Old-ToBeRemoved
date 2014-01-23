@@ -5,8 +5,9 @@ var mappifyConceptIdCounter = 0;
 var MappifyConcept = function() {
   this.init();
   this.markerIconPath = null;
-  this.infoTenmplate = null;
+  this.infoTemplate = null;
   this.sponateQuery = null;
+  this.sponateMapping = null;
 };
 
 MappifyConcept.prototype = {

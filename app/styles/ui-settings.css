@@ -32,17 +32,37 @@
   padding-top: 1em;
   padding-bottom: 0.5em;
   color: #FFF;
-  font-style: bold !important;
+  font-weight: bold;
 }
 
-div#mappify-sponate-query textarea, div#mappify-sponate-mapping textarea, div#mappify-info-template textarea{
+.mappify-textarea-info {
+  padding-top: 1em;
+  padding-bottom: 0.5em;
+  color: #FFF;
+}
+
+div#mappify-sponate-query textarea {
   width: 21em;
   height: 17em;
 /*   font-size: 9pt; */
+}
+
+div#mappify-sponate-mapping textarea {
+  width: 21em;
+  height: 10em;
+}
+
+div#mappify-info-template textarea {
+  width: 21em;
+  height: 8em;
 }
 
 .mappify-sponate-query-var {
   color: #FFF;
   margin-right: 1em;
   font-style: italic;
+}
+
+.mappify-settings-bottomrule {
+  border-bottom: 1px solid #DDDDDD;
 }

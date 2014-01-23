@@ -3,11 +3,12 @@
 angular.module('mappifyApp')
   .controller('UiSettingsCtrl', function($scope, $modal, mappifyConceptsService) {
     
-    /** marker settings */
-    $scope.markerFilePath = null;
-    
+    /*
+     * marker settings
+     * ========================================================================
+     */
     $scope.markerSelected = function() {
-      return $scope.markerFilePath !== null ? true : false;
+      return $scope.$parent.markerFilePath !== null ? true : false;
     };
     
     $scope.open = function () {
@@ -18,12 +19,18 @@ angular.module('mappifyApp')
       });
       
       modalInstance.result.then(function (selectedPath) {
-        $scope.markerFilePath = selectedPath;
+        $scope.$parent.markerFilePath = selectedPath;
       });
     };
+    $scope.$on('mappify-concept-selection-changed', function() {
+      $scope.$parent.markerFilePath = mappifyConceptsService.getMarkerIconPath(
+          $scope.selectedMappifyConcept);
+    });
     
-    
-    /** SPONATE query settings */
+    /*
+     * SPONATE query settings
+     * ========================================================================
+     */
     var demoQuery =
       'SELECT * WHERE {\n' + 
         '    ?r rdfs:label ?label .\n' +
@@ -32,21 +39,20 @@ angular.module('mappifyApp')
         '    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .}';
     
     $scope.$on('mappify-concept-selection-changed', function() {
-      var sponateQuery = mappifyConceptsService.getSponateQuery(
-          $scope.selectedMappifyConcepts[0]);
+      var concept = $scope.selectedMappifyConcept;
+      var sponateQuery = mappifyConceptsService.getSponateQuery(concept);
       if (sponateQuery == null) {
-        $scope.sponateQuery = demoQuery;
+        $scope.$parent.sponateQuery = demoQuery;
       } else {
-        $scope.sponateQuery = sponateQuery;
+        $scope.$parent.sponateQuery = sponateQuery;
       }
       
-      $scope.markerFilePath = mappifyConceptsService.getMarkerIconPath(
-          $scope.selectedMappifyConcepts[0]);
+      jQuery('#mappify-sponate-query textarea').val($scope.sponateQuery);
     });
     
     
-    $scope.updateQueryStatus = function(query) {
-      $scope.sponateQuery = query;
+    $scope.updateQueryStatus = function(queryStr) {
+      $scope.$parent.sponateQuery = queryStr;
     };
     
     $scope.queryVars = function() {
@@ -60,6 +66,52 @@ angular.module('mappifyApp')
         }
       }
       return matches;
+    };
+    
+    
+    /*
+     * SPONATE mapping settings
+     * ========================================================================
+     */
+    var exampleSponateMapping =
+      '{id: "?r", name : "?label",\n' + 
+      ' pic: "?d",\n' +
+      ' lat: "?lat",\n' +
+      ' long: "?long"}';
+    $scope.$on('mappify-concept-selection-changed', function() {
+      var concept = $scope.selectedMappifyConcept;
+      var sponateMapping = mappifyConceptsService.getSponateMapping(concept);
+      if (sponateMapping === null) {
+        $scope.$parent.sponateMapping = exampleSponateMapping;
+      } else {
+        $scope.$parent.sponateMapping = sponateMapping;
+      }
+      jQuery('#mappify-sponate-mapping textarea').val($scope.sponateMapping);
+    });
+    $scope.updateSponateMappingStatus = function(mappingStr) {
+      $scope.$parent.sponateMapping = mappingStr;
+    };
+    
+    
+    /*
+     * info template settings
+     * ========================================================================
+     */
+    var exampleInfoTemplate = 
+      '{{name}}\n' +
+      '<img src="{{pic}}">';
+    $scope.$on('mappify-concept-selection-changed', function(){
+      var concept = $scope.selectedMappifyConcept;
+      var infoTemplate = mappifyConceptsService.getInfoTemplate(concept);
+      if (infoTemplate === null) {
+        $scope.$parent.infoTemplate = exampleInfoTemplate;
+      } else {
+        $scope.$parent.infoTemplate = infoTemplate;
+      }
+      jQuery('#mappify-info-template textarea').val($scope.infoTemplate);
+    });
+    $scope.updateInfoTemplateStatus = function(infoTemplateStr) {
+      $scope.$parent.infoTemplate = infoTemplateStr;
     };
   });
 

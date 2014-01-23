@@ -16,6 +16,9 @@ MappifyConcepts.prototype = {
     getSelectedConcept : function() {
       return this.selectedConcept;
     },
+    addConcept: function() {
+      this.concepts.push(new MappifyConcept());
+    },
     createAndAddConcept : function(name) {
       var concept = new MappifyConcept();
       if (name !== null) {
@@ -34,15 +37,40 @@ MappifyConcepts.prototype = {
       return this.concepts[index].getSponateQuery();
     },
     setSponateQuery: function(concept, queryStr) {
-      var index = this.concepts.indexOf(concept);
-      this.concepts[index].sponateQuery = queryStr;
+      concept.sponateQuery = queryStr;
     },
     getMarkerIconPath: function(concept) {
       var index = this.concepts.indexOf(concept);
       return this.concepts[index].markerIconPath;
     },
     setMarkerIconPath: function(concept, markerIconPath) {
+      concept.markerIconPath = markerIconPath;
+    },
+    getSponateMapping: function(concept) {
       var index = this.concepts.indexOf(concept);
-      this.concepts[index].markerIconPath = markerIconPath;
+      return this.concepts[index].sponateMapping;
+    },
+    setSponateMapping: function(concept, mappingStr) {
+      concept.sponateMapping = mappingStr;
+    },
+    getInfoTemplate: function(concept) {
+      var index = this.concepts.indexOf(concept);
+      return this.concepts[index].infoTemplate;
+    },
+    setInfoTemplate: function(concept, infoTemplate) {
+      concept.infoTemplate = infoTemplate;
+    },
+    saveCurrentValues: function(mainScope) {
+      if (mainScope.selectedMappifyConcept !== null) {
+        var concept = mainScope.selectedMappifyConcept;
+        // write markerIconPath
+        concept.markerIconPath = mainScope.markerFilePath;
+        // write infoTemplate
+        concept.infoTemplate = mainScope.infoTemplate;
+        // write sponate query
+        concept.sponateQuery = mainScope.sponateQuery;
+        // write sponateMapping
+        concept.sponateMapping = mainScope.sponateMapping;
+      }
     }
 };
