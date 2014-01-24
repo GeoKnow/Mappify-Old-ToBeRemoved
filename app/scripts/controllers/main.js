@@ -174,6 +174,30 @@ angular.module('mappifyApp')
     maxBoxLayer.events.register('featureadded',
         maxBoxLayer, $scope.coordListener);
     
+    $scope.updateMap = function(){
+      var mappifyConcepts = mappifyConceptsService.getConcepts();
+      for (var i = 0; i < mappifyConcepts.length; i++) {
+        var concept = mappifyConcepts[i];
+        // get lat/lon constraints
+        var boundsEPSG4326  = $scope.maxBtn.coords.getBounds().clone()
+            .transform(map.getProjection(), new OpenLayers.Projection("EPSG:4326"));
+        // to EPSG:4326
+        var latMax = boundsEPSG4326.top;
+        var latMin = boundsEPSG4326.bottom;
+        
+        var lonMin = boundsEPSG4326.left;
+        var lonMax = boundsEPSG4326.right;
+        
+        // inject lat/lon constraints
+        var closeBracePos = concept.sponateQuery.lastIndexOf('}');
+        var length = concept.sponateQuery.length;
+        var query = concept.sponateQuery.slice(0, closeBracepos) +
+            ' FILTER( (xsd:float(?lat) < '   + ')';
+        
+      }
+      
+    };
+    
     
     /*
      * Mappify Concept handling

@@ -72,5 +72,8 @@ MappifyConcepts.prototype = {
         // write sponateMapping
         concept.sponateMapping = mainScope.sponateMapping;
       }
+    },
+    getgetConcepts : function() {
+      return this.concepts;
     }
 };

@@ -80,19 +80,25 @@
 }
 
 .map-sec-btn {
-  width : 17em;
+  width : 12em;
 }
 
 #map-sec-init {
   position : absolute;
-  left : calc( 10px + 3em );
+  left : calc( 10px + 2em + 7px );
   top : 10px;
 }
 
 #map-sec-max {
   position : absolute;
-  left : calc( 10px + 3em );
+  left : calc( 10px + 2em + 7px );
   top : 50px;
+}
+
+#mappify-map-update {
+  position: absolute;
+  left: calc( 10px + 3em + 12em );
+  top : 10px;
 }
 
 .tab-content {

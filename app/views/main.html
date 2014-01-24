@@ -1,12 +1,14 @@
 <div id="mappify-main">
     <button id="map-sec-init" class="btn map-sec-btn"
-            ng-class="{'btn-success': initBtn.active}"
+            ng-class="{'btn-info': initBtn.active}"
             ng-click="toggleInitBoxDraw()">
         set initial map section</button>
     <button id="map-sec-max" class="btn map-sec-btn"
-            ng-class="{'btn-success': maxBtn.active}"
+            ng-class="{'btn-info': maxBtn.active}"
             ng-click="toggleMaxBoxDraw()">
         set maximal map section</button>
+    <button id="mappify-map-update" class="btn btn-info"
+            ng-click="updateMap()">update map</button>
     
     <div id="map" class="olMap"></div>
     
