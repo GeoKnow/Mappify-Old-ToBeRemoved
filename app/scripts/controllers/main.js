@@ -1,7 +1,8 @@
 'use strict';
 
 angular.module('mappifyApp')
-  .controller('MainCtrl', function ($scope, mappifyConceptsService, sponateService) {
+  .controller('MainCtrl', function ($scope, $compile, mappifyConceptsService,
+      sponateService, strTemplateParser) {
     /**
      * This is the main controller of the Mappify application. It contains all
      * UI settings, map related settings and code managing Mappify Concepts
@@ -64,7 +65,47 @@ angular.module('mappifyApp')
      * map related settings
      * ========================================================================
      */
+    // constants
+    var dummyPopupHTMLClass = 'mappify-popup-container';
+    
+    // helper functions
+    var helpers = {};
+    helpers.str = function(uri) {
+      uri = uri.trim();
+      var uriLen = uri.length;
+      if (uri.indexOf('<') === 0 && uri.lastIndexOf('>') === uriLen-1) {
+        uri = uri.substring(1, uriLen-1);
+      }
+      return uri;
+    };
+    
     // event handlers
+    /*
+     * commented out because this caused the download of every image that could
+     * possiblby shown in a popup.
+     */
+//    var popUpReplacements = {};
+//    var markerClick = function (event) {
+//      if (this.popup === null) {
+//        this.popup = this.createPopup(this.closeBox);
+//        map.addPopup(this.popup);
+//        this.popup.show();
+//        var id = currentPopup.div.getElementsByClassName(dummyPopupHTMLClass)[0].id;
+//        var popupElem = popUpReplacements[id];
+//        $scope.$apply(function() {
+//          jQuery('#' + id).append(popupElem);
+//        });
+////      this.popup.updateSize();
+//      } else {
+//        this.popup.toggle();
+//      }
+//      currentPopup = this.popup;
+//      OpenLayers.Event.stop(event);
+//    };
+    
+    /*
+     * fallback for the commented out version above
+     */
     var markerClick = function (event) {
       if (this.popup === null) {
         this.popup = this.createPopup(this.closeBox);
@@ -76,7 +117,6 @@ angular.module('mappifyApp')
       currentPopup = this.popup;
       OpenLayers.Event.stop(event);
     };
-    
     
     // call map initialization
     init();
@@ -204,6 +244,7 @@ angular.module('mappifyApp')
         var concept = mappifyConcepts[i];
         
         // inject lat/lon constraints
+        
         var closeBracePos = concept.sponateQuery.lastIndexOf('}');
         var length = concept.sponateQuery.length;
         var query = concept.sponateQuery.slice(0, closeBracePos) +
@@ -244,11 +285,13 @@ angular.module('mappifyApp')
           var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
           var popupSize = new OpenLayers.Size(1000,1000);
           var layerName = 'mappify-markers-' + concept.id;
-          var markerLayers = map.getLayersByName('mappify-markers-' + concept.id);
+          var markerLayers =
+              map.getLayersByName('mappify-markers-' + concept.id);
           for (var i = 0; i < markerLayers.length; i++) {
             var layer = markerLayers[i];
             map.removeLayer(layer);
           }
+          // FIXME: popup layer needs to be deleted, too!!! 
           var markers = new OpenLayers.Layer.Markers(layerName);
           map.addLayer(markers);
           
@@ -269,9 +312,28 @@ angular.module('mappifyApp')
               });
 
             feature.data.overflow = 'auto';
-            // FIXME: replace with $compile call
-            feature.data.popupContentHTML = concept.infoTemplate;
-            feature.data.icon = new OpenLayers.Icon(concept.markerIconPath, size, offset);
+//            var dummyScope = $scope.$new();
+//            jQuery.extend(dummyScope, res, helpers);
+//            var popupElem = $compile('<div class="mappify-info-popup">' +
+//                concept.infoTemplate + '</div>')(dummyScope);
+//            var popupId = 'mappify-' + concept.id + '-' + i;
+//             // FIXME: this feels hacky and there must be a better way to do this
+//            popUpReplacements[popupId] = popupElem;
+//            feature.data.popupContentHTML =
+//                '<div id="' + popupId + '" class="' + dummyPopupHTMLClass + '"/>';
+            feature.data.popupContentHTML = strTemplateParser.resolve(
+                concept.infoTemplate, res);
+            
+//            if (concept.markerIconPath === null) {
+//              // fallback marker
+//              var markerIconPath = 'bower_components/openlayers/img/marker.png';
+//              var size = new OpenLayers.Size(30,30);
+//              var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
+//              feature.data.icon = new OpenLayers.Icon(markerIconPath, size, offset);
+              
+//            } else {
+              feature.data.icon = new OpenLayers.Icon(concept.markerIconPath, size, offset);
+//            }
             var marker = feature.createMarker();
             marker.events.register('mousedown', feature, markerClick);
             markers.addMarker(marker);
