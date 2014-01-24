@@ -1,7 +1,7 @@
 'use strict';
 
 angular.module('mappifyApp')
-  .controller('MainCtrl', function ($scope, mappifyConceptsService) {
+  .controller('MainCtrl', function ($scope, mappifyConceptsService, sponateService) {
     /**
      * This is the main controller of the Mappify application. It contains all
      * UI settings, map related settings and code managing Mappify Concepts
@@ -64,6 +64,19 @@ angular.module('mappifyApp')
      * map related settings
      * ========================================================================
      */
+    // event handlers
+    var markerClick = function (event) {
+      if (this.popup === null) {
+        this.popup = this.createPopup(this.closeBox);
+        map.addPopup(this.popup);
+        this.popup.show();
+      } else {
+        this.popup.toggle();
+      }
+      currentPopup = this.popup;
+      OpenLayers.Event.stop(event);
+    };
+    
     
     // call map initialization
     init();
@@ -175,25 +188,95 @@ angular.module('mappifyApp')
         maxBoxLayer, $scope.coordListener);
     
     $scope.updateMap = function(){
+      
+      mappifyConceptsService.saveCurrentValues($scope);
       var mappifyConcepts = mappifyConceptsService.getConcepts();
+      
+      // get lat/lon constraints
+      var boundsEPSG4326  = $scope.maxBtn.coords.getBounds().clone()
+      .transform(map.getProjection(), new OpenLayers.Projection("EPSG:4326"));
+      var latMax = boundsEPSG4326.top;
+      var latMin = boundsEPSG4326.bottom;
+      var lonMin = boundsEPSG4326.left;
+      var lonMax = boundsEPSG4326.right;
+      
       for (var i = 0; i < mappifyConcepts.length; i++) {
         var concept = mappifyConcepts[i];
-        // get lat/lon constraints
-        var boundsEPSG4326  = $scope.maxBtn.coords.getBounds().clone()
-            .transform(map.getProjection(), new OpenLayers.Projection("EPSG:4326"));
-        // to EPSG:4326
-        var latMax = boundsEPSG4326.top;
-        var latMin = boundsEPSG4326.bottom;
-        
-        var lonMin = boundsEPSG4326.left;
-        var lonMax = boundsEPSG4326.right;
         
         // inject lat/lon constraints
         var closeBracePos = concept.sponateQuery.lastIndexOf('}');
         var length = concept.sponateQuery.length;
-        var query = concept.sponateQuery.slice(0, closeBracepos) +
-            ' FILTER( (xsd:float(?lat) < '   + ')';
+        var query = concept.sponateQuery.slice(0, closeBracePos) +
+            ' FILTER( (xsd:float(?lat) < ' + latMax + ') && ' +
+                     '(xsd:float(?lat) > ' + latMin + ') && ' +
+                     '(xsd:float(?long) < ' + lonMax + ') && ' +
+                     '(xsd:float(?long) > ' + lonMin + ')' +
+            ')' + concept.sponateQuery.slice(closeBracePos, length);
+        if (concept.sponateMapping === null) {
+          console.log('[WARN] concept ' + concept.name +
+              ' has no saved SPONATE mapping. Skipping...');
+          continue;
+        }
         
+        // FIXME: this is a hack due to
+        // https://github.com/GeoKnow/Jassa/issues/2
+        if (sponateService[concept.id] !== undefined) {
+          delete sponateService[concept.id];
+          var service = sponateService.service;
+          var prefixes = sponateService.context.getPrefixMap().getJson();
+          sponateService.initialize(service, prefixes);
+        }
+        
+        var sponateMapping = null;
+        eval('sponateMapping = ' + concept.sponateMapping + ';');
+        
+        sponateService.addMap({
+          'name' : concept.id,
+          'template' : [ sponateMapping ],
+          'from' : query
+        });
+        
+        var res = sponateService[concept.id].find().asList();
+        
+        res.done(function(queryResults) {
+          // general setup of markers parameters
+          var size = new OpenLayers.Size(40,40);
+          var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
+          var popupSize = new OpenLayers.Size(1000,1000);
+          var layerName = 'mappify-markers-' + concept.id;
+          var markerLayers = map.getLayersByName('mappify-markers-' + concept.id);
+          for (var i = 0; i < markerLayers.length; i++) {
+            var layer = markerLayers[i];
+            map.removeLayer(layer);
+          }
+          var markers = new OpenLayers.Layer.Markers(layerName);
+          map.addLayer(markers);
+          
+          for (var i = 0; i < queryResults.length; i++) {
+            var res = queryResults[i];
+            var long = res.long;
+            var lat = res.lat;
+            var longLat = new OpenLayers.LonLat(long, lat).transform(
+                new OpenLayers.Projection('EPSG:4326'),
+                new OpenLayers.Projection('EPSG:900913'));
+            
+            var feature = new OpenLayers.Feature(markers, longLat);
+
+            feature.closeBox = true;
+            feature.popupClass = OpenLayers.Class(OpenLayers.Popup.FramedCloud, {
+                'autoSize': true,
+                'maxSize': popupSize
+              });
+
+            feature.data.overflow = 'auto';
+            // FIXME: replace with $compile call
+            feature.data.popupContentHTML = concept.infoTemplate;
+            feature.data.icon = new OpenLayers.Icon(concept.markerIconPath, size, offset);
+            var marker = feature.createMarker();
+            marker.events.register('mousedown', feature, markerClick);
+            markers.addMarker(marker);
+          }
+        });
       }
       
     };
@@ -263,9 +346,6 @@ angular.module('mappifyApp')
     
     var demoConcept = mappifyConceptsService.createAndAddConcept('Demo');
     var query =
-      'PREFIX dbo: <http://dbpedia.org/ontology/> \n' +
-      'PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> \n' +
-      'PREFIX foaf: <http://xmlns.com/foaf/0.1/> \n' +
       'SELECT * {\n' +
       '  ?r a dbo:Castle . \n' +
       '  ?r rdfs:label ?label . \n' +

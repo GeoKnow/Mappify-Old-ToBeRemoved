@@ -7,14 +7,15 @@ angular.module('mappifyApp')
     var endpointUri = 'http://localhost/sparql';
     var defaultGraphs = ['http://dbpedia.org'];
     var conn =
-        Jassa.sponate.ServiceUtils.createSparqlHttp(endpointUri, defaultGraphs);
+        new Jassa.service.SparqlServiceHttp(endpointUri, defaultGraphs);
     
     /** prefix definitions */
     var prefixes = {
-        'dbpedia-owl': 'http://dbpedia.org/ontology/',
+        'dbo': 'http://dbpedia.org/ontology/',
         'dbpedia': 'http://.org/resource/',
         'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
-        'foaf': 'http://xmlns.com/foaf/0.1/'
+        'foaf': 'http://xmlns.com/foaf/0.1/',
+        'geo': 'http://www.w3.org/2003/01/geo/wgs84_pos#' 
     };
     
     return new Jassa.sponate.StoreFacade(conn, prefixes);

@@ -36,7 +36,7 @@ angular.module('mappifyApp')
         '    ?r rdfs:label ?label .\n' +
         '    ?r foaf:depiction ?d .\n' +
         '    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .\n' +
-        '    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .}';
+        '    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .} LIMIT 1000';
     
     $scope.$on('mappify-concept-selection-changed', function() {
       var concept = $scope.selectedMappifyConcept;
