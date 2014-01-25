@@ -2,7 +2,7 @@
 
 angular.module('mappifyApp')
   .controller('MainCtrl', function ($scope, $compile, $timeout,
-      mappifyConceptsService, sponateService, strTemplateParser) {
+      mappifyConceptsService, sponateService) {
     /**
      * This is the main controller of the Mappify application. It contains all
      * UI settings, map related settings and code managing Mappify Concepts
@@ -205,8 +205,7 @@ angular.module('mappifyApp')
         var newScope = $scope.$new();
         // hand everything over to a controller with an own scope which will
         // care about displaying of the markers and setting up the pop ups
-        MarkerDisplayCtrl(newScope, sponateService, strTemplateParser,
-            concept, bounds);
+        MarkerDisplayCtrl(newScope, $compile, sponateService, concept, bounds);
       }
     };
     
@@ -294,49 +293,36 @@ angular.module('mappifyApp')
       ' long: "?long"}';
     mappifyConceptsService.setSponateMapping(demoConcept, demoSponateMapping);
     
-    var demoInfoTemplate = '{{name}}\n<img src="{{pic}}">';
+    var demoInfoTemplate = '{{name}}\n<img src="{{pic.slice(1, -1)}}">';
     mappifyConceptsService.setInfoTemplate(demoConcept, demoInfoTemplate);
   });
 
 
 
 
-var MarkerDisplayCtrl = function($scope, sponateService, strTemplateParser,
-    concept, bounds) {
+var MarkerDisplayCtrl = function($scope, $compile, sponateService, concept, bounds) {  
   // constants
-//var dummyPopupHTMLClass = 'mappify-popup-container';
+  var popupContainerHTMLClass = 'mappify-popup-container';
 
-  /*
-   * commented out because this caused the download of every image that could
-   * possiblby shown in a popup.
-   */
-//  var popUpReplacements = {};
-//  var markerClick = function (event) {
-//    if (this.popup === null) {
-//      this.popup = this.createPopup(this.closeBox);
-//      map.addPopup(this.popup);
-//      this.popup.show();
-//      var id = currentPopup.div.getElementsByClassName(dummyPopupHTMLClass)[0].id;
-//      var popupElem = popUpReplacements[id];
-//      $scope.$apply(function() {
-//        jQuery('#' + id).append(popupElem);
-//      });
-////    this.popup.updateSize();
-//    } else {
-//      this.popup.toggle();
-//    }
-//    currentPopup = this.popup;
-//    OpenLayers.Event.stop(event);
-//  };
-  
-  /*
-   * fallback for the commented out version above
-   */
+  var popUpReplacements = {};
   var markerClick = function (event) {
     if (this.popup === null) {
       this.popup = this.createPopup(this.closeBox);
       map.addPopup(this.popup);
       this.popup.show();
+      var id = this.popup.div.getElementsByClassName(
+          popupContainerHTMLClass)[0].id;
+      // compile actual template
+      var popupElem = $compile(
+          '<div class="mappify-info-popup" onload="refresh()">' +
+          $scope.concept.infoTemplate + '</div>')(popUpReplacements[id]);
+      // and append it
+      $scope.$apply(function() {
+        jQuery('#' + id).append(popupElem);
+      });
+      
+      this.popup.registerImageListeners();
+      this.popup.updateSize();
     } else {
       this.popup.toggle();
     }
@@ -379,7 +365,7 @@ var MarkerDisplayCtrl = function($scope, sponateService, strTemplateParser,
     // general setup of markers parameters
     var size = new OpenLayers.Size(40,40);
     var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
-    var popupSize = new OpenLayers.Size(1000,1000);
+    var popupSize = new OpenLayers.Size(550,550);
     var layerName = 'mappify-markers-' + $scope.concept.id;
     var markerLayers =
         map.getLayersByName('mappify-markers-' + $scope.concept.id);
@@ -409,29 +395,26 @@ var MarkerDisplayCtrl = function($scope, sponateService, strTemplateParser,
       });
 
       feature.data.overflow = 'auto';
-//      var dummyScope = $scope.$new();
-//      jQuery.extend(dummyScope, res, helpers);
-//      var popupElem = $compile('<div class="mappify-info-popup">' +
-//          concept.infoTemplate + '</div>')(dummyScope);
-//      var popupId = 'mappify-' + concept.id + '-' + i;
-//       // FIXME: this feels hacky and there must be a better way to do this
-//      popUpReplacements[popupId] = popupElem;
-//      feature.data.popupContentHTML =
-//          '<div id="' + popupId + '" class="' + dummyPopupHTMLClass + '"/>';
-      feature.data.popupContentHTML = strTemplateParser.resolve(
-          $scope.concept.infoTemplate, res);
+      var dummyScope = $scope.$new();
+      jQuery.extend(dummyScope, res);
+
+      var popupId = 'mappify-' + $scope.concept.id + '-' + i;
+      popUpReplacements[popupId] = dummyScope;
+      feature.data.popupContentHTML =
+          '<div id="' + popupId + '" class="' + popupContainerHTMLClass + '"/>';
       
-//      if (concept.markerIconPath === null) {
-//        // fallback marker
-//        var markerIconPath = 'bower_components/openlayers/img/marker.png';
-//        var size = new OpenLayers.Size(30,30);
-//        var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
-//        feature.data.icon = new OpenLayers.Icon(markerIconPath, size, offset);
+      if ($scope.concept.markerIconPath === null) {
+        // fallback marker
+        var markerIconPath = 'bower_components/openlayers/img/marker.png';
+        var size = new OpenLayers.Size(30,30);
+        var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
+        feature.data.icon = new OpenLayers.Icon(markerIconPath, size, offset);
         
-//      } else {
+      } else {
         feature.data.icon = new OpenLayers.Icon(
             $scope.concept.markerIconPath, size, offset);
-//      }
+      }
+      
       var marker = feature.createMarker();
       marker.events.register('mousedown', feature, markerClick);
       markers.addMarker(marker);

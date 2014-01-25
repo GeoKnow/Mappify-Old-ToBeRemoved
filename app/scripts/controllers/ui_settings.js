@@ -100,7 +100,7 @@ angular.module('mappifyApp')
      */
     var exampleInfoTemplate = 
       '{{name}}\n' +
-      '<img src="{{pic}}">';
+      '<img src="{{pic.slice(1,-1)}}">';
     $scope.$on('mappify-concept-selection-changed', function(){
       var concept = $scope.selectedMappifyConcept;
       var infoTemplate = mappifyConceptsService.getInfoTemplate(concept);
