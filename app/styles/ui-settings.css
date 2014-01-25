@@ -66,3 +66,19 @@ div#mappify-info-template textarea {
 .mappify-settings-bottomrule {
   border-bottom: 1px solid #DDDDDD;
 }
+
+.mappify-marker-radio {
+  margin-right: 2em;
+}
+
+.modal.fade.in {
+  width: 600px;
+  height: 518px;
+  overflow: hidden;
+}
+
+.modal-dialog {
+  width: 600px;
+  height: 300px;
+  margin: 0;
+}
