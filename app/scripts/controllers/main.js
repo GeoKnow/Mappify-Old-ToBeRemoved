@@ -1,8 +1,8 @@
 'use strict';
 
 angular.module('mappifyApp')
-  .controller('MainCtrl', function ($scope, $compile, mappifyConceptsService,
-      sponateService, strTemplateParser) {
+  .controller('MainCtrl', function ($scope, $compile, $timeout,
+      mappifyConceptsService, sponateService, strTemplateParser) {
     /**
      * This is the main controller of the Mappify application. It contains all
      * UI settings, map related settings and code managing Mappify Concepts
@@ -12,6 +12,8 @@ angular.module('mappifyApp')
      * UI related settings
      * ========================================================================
      */
+    // makes the scroll bar in the controls div (on the left hand side) slim
+    // and pretty :)
     $scope.slimScrollInit = function() {
       $('.slimscroll').slimScroll({
           height: '100%'
@@ -47,6 +49,7 @@ angular.module('mappifyApp')
         beforeSelectionChange: function(rowItem) {
           $scope.$broadcast('mappify-concept-selection-will-change');
           $scope.selectedMappifyConcept = rowItem.entity;
+          // return false --> cancel selection; return true --> go on
           return true;
         }
     };
@@ -65,58 +68,6 @@ angular.module('mappifyApp')
      * map related settings
      * ========================================================================
      */
-    // constants
-    var dummyPopupHTMLClass = 'mappify-popup-container';
-    
-    // helper functions
-    var helpers = {};
-    helpers.str = function(uri) {
-      uri = uri.trim();
-      var uriLen = uri.length;
-      if (uri.indexOf('<') === 0 && uri.lastIndexOf('>') === uriLen-1) {
-        uri = uri.substring(1, uriLen-1);
-      }
-      return uri;
-    };
-    
-    // event handlers
-    /*
-     * commented out because this caused the download of every image that could
-     * possiblby shown in a popup.
-     */
-//    var popUpReplacements = {};
-//    var markerClick = function (event) {
-//      if (this.popup === null) {
-//        this.popup = this.createPopup(this.closeBox);
-//        map.addPopup(this.popup);
-//        this.popup.show();
-//        var id = currentPopup.div.getElementsByClassName(dummyPopupHTMLClass)[0].id;
-//        var popupElem = popUpReplacements[id];
-//        $scope.$apply(function() {
-//          jQuery('#' + id).append(popupElem);
-//        });
-////      this.popup.updateSize();
-//      } else {
-//        this.popup.toggle();
-//      }
-//      currentPopup = this.popup;
-//      OpenLayers.Event.stop(event);
-//    };
-    
-    /*
-     * fallback for the commented out version above
-     */
-    var markerClick = function (event) {
-      if (this.popup === null) {
-        this.popup = this.createPopup(this.closeBox);
-        map.addPopup(this.popup);
-        this.popup.show();
-      } else {
-        this.popup.toggle();
-      }
-      currentPopup = this.popup;
-      OpenLayers.Event.stop(event);
-    };
     
     // call map initialization
     init();
@@ -229,118 +180,34 @@ angular.module('mappifyApp')
     
     $scope.updateMap = function(){
       
-      mappifyConceptsService.saveCurrentValues($scope);
+      if ($scope.selectionMade()) {
+        mappifyConceptsService.saveCurrentValues($scope);
+      }
       var mappifyConcepts = mappifyConceptsService.getConcepts();
       
       // get lat/lon constraints
       var boundsEPSG4326  = $scope.maxBtn.coords.getBounds().clone()
       .transform(map.getProjection(), new OpenLayers.Projection("EPSG:4326"));
-      var latMax = boundsEPSG4326.top;
-      var latMin = boundsEPSG4326.bottom;
-      var lonMin = boundsEPSG4326.left;
-      var lonMax = boundsEPSG4326.right;
+      var bounds = {
+          latMax: boundsEPSG4326.top,
+          latMin: boundsEPSG4326.bottom,
+          lonMin: boundsEPSG4326.left,
+          lonMax: boundsEPSG4326.right
+      };
       
       for (var i = 0; i < mappifyConcepts.length; i++) {
         var concept = mappifyConcepts[i];
-        
-        // inject lat/lon constraints
-        
-        var closeBracePos = concept.sponateQuery.lastIndexOf('}');
-        var length = concept.sponateQuery.length;
-        var query = concept.sponateQuery.slice(0, closeBracePos) +
-            ' FILTER( (xsd:float(?lat) < ' + latMax + ') && ' +
-                     '(xsd:float(?lat) > ' + latMin + ') && ' +
-                     '(xsd:float(?long) < ' + lonMax + ') && ' +
-                     '(xsd:float(?long) > ' + lonMin + ')' +
-            ')' + concept.sponateQuery.slice(closeBracePos, length);
-        if (concept.sponateMapping === null) {
-          console.log('[WARN] concept ' + concept.name +
-              ' has no saved SPONATE mapping. Skipping...');
+        if (concept.sponateQuery === null) {
+          console.log('[WARN] concept ' + this.concept.name +
+          ' has no saved SPONATE mapping. Skipping...');
           continue;
         }
-        
-        // FIXME: this is a hack due to
-        // https://github.com/GeoKnow/Jassa/issues/2
-        if (sponateService[concept.id] !== undefined) {
-          delete sponateService[concept.id];
-          var service = sponateService.service;
-          var prefixes = sponateService.context.getPrefixMap().getJson();
-          sponateService.initialize(service, prefixes);
-        }
-        
-        var sponateMapping = null;
-        eval('sponateMapping = ' + concept.sponateMapping + ';');
-        
-        sponateService.addMap({
-          'name' : concept.id,
-          'template' : [ sponateMapping ],
-          'from' : query
-        });
-        
-        var res = sponateService[concept.id].find().asList();
-        
-        res.done(function(queryResults) {
-          // general setup of markers parameters
-          var size = new OpenLayers.Size(40,40);
-          var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
-          var popupSize = new OpenLayers.Size(1000,1000);
-          var layerName = 'mappify-markers-' + concept.id;
-          var markerLayers =
-              map.getLayersByName('mappify-markers-' + concept.id);
-          for (var i = 0; i < markerLayers.length; i++) {
-            var layer = markerLayers[i];
-            map.removeLayer(layer);
-          }
-          // FIXME: popup layer needs to be deleted, too!!! 
-          var markers = new OpenLayers.Layer.Markers(layerName);
-          map.addLayer(markers);
-          
-          for (var i = 0; i < queryResults.length; i++) {
-            var res = queryResults[i];
-            var long = res.long;
-            var lat = res.lat;
-            var longLat = new OpenLayers.LonLat(long, lat).transform(
-                new OpenLayers.Projection('EPSG:4326'),
-                new OpenLayers.Projection('EPSG:900913'));
-            
-            var feature = new OpenLayers.Feature(markers, longLat);
-
-            feature.closeBox = true;
-            feature.popupClass = OpenLayers.Class(OpenLayers.Popup.FramedCloud, {
-                'autoSize': true,
-                'maxSize': popupSize
-              });
-
-            feature.data.overflow = 'auto';
-//            var dummyScope = $scope.$new();
-//            jQuery.extend(dummyScope, res, helpers);
-//            var popupElem = $compile('<div class="mappify-info-popup">' +
-//                concept.infoTemplate + '</div>')(dummyScope);
-//            var popupId = 'mappify-' + concept.id + '-' + i;
-//             // FIXME: this feels hacky and there must be a better way to do this
-//            popUpReplacements[popupId] = popupElem;
-//            feature.data.popupContentHTML =
-//                '<div id="' + popupId + '" class="' + dummyPopupHTMLClass + '"/>';
-            feature.data.popupContentHTML = strTemplateParser.resolve(
-                concept.infoTemplate, res);
-            
-//            if (concept.markerIconPath === null) {
-//              // fallback marker
-//              var markerIconPath = 'bower_components/openlayers/img/marker.png';
-//              var size = new OpenLayers.Size(30,30);
-//              var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
-//              feature.data.icon = new OpenLayers.Icon(markerIconPath, size, offset);
-              
-//            } else {
-              feature.data.icon = new OpenLayers.Icon(concept.markerIconPath, size, offset);
-//            }
-            var marker = feature.createMarker();
-            marker.events.register('mousedown', feature, markerClick);
-            markers.addMarker(marker);
-          }
-        });
+        var newScope = $scope.$new();
+        // hand everything over to a controller with an own scope which will
+        // care about displaying of the markers and setting up the pop ups
+        MarkerDisplayCtrl(newScope, sponateService, strTemplateParser,
+            concept, bounds);
       }
-      
     };
     
     
@@ -430,3 +297,144 @@ angular.module('mappifyApp')
     var demoInfoTemplate = '{{name}}\n<img src="{{pic}}">';
     mappifyConceptsService.setInfoTemplate(demoConcept, demoInfoTemplate);
   });
+
+
+
+
+var MarkerDisplayCtrl = function($scope, sponateService, strTemplateParser,
+    concept, bounds) {
+  // constants
+//var dummyPopupHTMLClass = 'mappify-popup-container';
+
+  /*
+   * commented out because this caused the download of every image that could
+   * possiblby shown in a popup.
+   */
+//  var popUpReplacements = {};
+//  var markerClick = function (event) {
+//    if (this.popup === null) {
+//      this.popup = this.createPopup(this.closeBox);
+//      map.addPopup(this.popup);
+//      this.popup.show();
+//      var id = currentPopup.div.getElementsByClassName(dummyPopupHTMLClass)[0].id;
+//      var popupElem = popUpReplacements[id];
+//      $scope.$apply(function() {
+//        jQuery('#' + id).append(popupElem);
+//      });
+////    this.popup.updateSize();
+//    } else {
+//      this.popup.toggle();
+//    }
+//    currentPopup = this.popup;
+//    OpenLayers.Event.stop(event);
+//  };
+  
+  /*
+   * fallback for the commented out version above
+   */
+  var markerClick = function (event) {
+    if (this.popup === null) {
+      this.popup = this.createPopup(this.closeBox);
+      map.addPopup(this.popup);
+      this.popup.show();
+    } else {
+      this.popup.toggle();
+    }
+    currentPopup = this.popup;
+    OpenLayers.Event.stop(event);
+  };
+  
+  $scope.concept = concept;
+  // inject lat/lon constraints
+  var closeBracePos = $scope.concept.sponateQuery.lastIndexOf('}');
+  var length = $scope.concept.sponateQuery.length;
+  var query = $scope.concept.sponateQuery.slice(0, closeBracePos) +
+      ' FILTER( (xsd:float(?lat) < ' + bounds.latMax + ') && ' +
+               '(xsd:float(?lat) > ' + bounds.latMin + ') && ' +
+               '(xsd:float(?long) < ' + bounds.lonMax + ') && ' +
+               '(xsd:float(?long) > ' + bounds.lonMin + ')' +
+      ')' + $scope.concept.sponateQuery.slice(closeBracePos, length);
+  
+  // FIXME: this is a hack due to
+  // https://github.com/GeoKnow/Jassa/issues/2
+  if (sponateService[$scope.concept.id] !== undefined) {
+    delete sponateService[$scope.concept.id];
+    var service = sponateService.service;
+    var prefixes = sponateService.context.getPrefixMap().getJson();
+    sponateService.initialize(service, prefixes);
+  }
+  
+  var sponateMapping = null;
+  eval('sponateMapping = ' + $scope.concept.sponateMapping + ';');
+  
+  sponateService.addMap({
+    'name' : $scope.concept.id,
+    'template' : [ sponateMapping ],
+    'from' : query
+  });
+  
+  var res = sponateService[$scope.concept.id].find().asList(false);
+  
+  res.done(function(queryResults) {
+    // general setup of markers parameters
+    var size = new OpenLayers.Size(40,40);
+    var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
+    var popupSize = new OpenLayers.Size(1000,1000);
+    var layerName = 'mappify-markers-' + $scope.concept.id;
+    var markerLayers =
+        map.getLayersByName('mappify-markers-' + $scope.concept.id);
+    for (var i = 0; i < markerLayers.length; i++) {
+      var layer = markerLayers[i];
+      map.removeLayer(layer);
+    }
+    // FIXME: popup layer needs to be deleted, too!!! 
+    var markers = new OpenLayers.Layer.Markers(layerName);
+    map.addLayer(markers);
+    
+    for (var i = 0; i < queryResults.length; i++) {
+      var res = queryResults[i];
+      var long = res.long;
+      var lat = res.lat;
+      var longLat = new OpenLayers.LonLat(long, lat).transform(
+          new OpenLayers.Projection('EPSG:4326'),
+          new OpenLayers.Projection('EPSG:900913'));
+      
+      var feature = new OpenLayers.Feature(markers, longLat);
+
+      feature.closeBox = true;
+      feature.popupClass = OpenLayers.Class(
+          OpenLayers.Popup.FramedCloud, {
+              'autoSize': true,
+              'maxSize': popupSize
+      });
+
+      feature.data.overflow = 'auto';
+//      var dummyScope = $scope.$new();
+//      jQuery.extend(dummyScope, res, helpers);
+//      var popupElem = $compile('<div class="mappify-info-popup">' +
+//          concept.infoTemplate + '</div>')(dummyScope);
+//      var popupId = 'mappify-' + concept.id + '-' + i;
+//       // FIXME: this feels hacky and there must be a better way to do this
+//      popUpReplacements[popupId] = popupElem;
+//      feature.data.popupContentHTML =
+//          '<div id="' + popupId + '" class="' + dummyPopupHTMLClass + '"/>';
+      feature.data.popupContentHTML = strTemplateParser.resolve(
+          $scope.concept.infoTemplate, res);
+      
+//      if (concept.markerIconPath === null) {
+//        // fallback marker
+//        var markerIconPath = 'bower_components/openlayers/img/marker.png';
+//        var size = new OpenLayers.Size(30,30);
+//        var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
+//        feature.data.icon = new OpenLayers.Icon(markerIconPath, size, offset);
+        
+//      } else {
+        feature.data.icon = new OpenLayers.Icon(
+            $scope.concept.markerIconPath, size, offset);
+//      }
+      var marker = feature.createMarker();
+      marker.events.register('mousedown', feature, markerClick);
+      markers.addMarker(marker);
+    }
+  });
+};
