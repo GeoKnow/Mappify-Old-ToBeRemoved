@@ -273,14 +273,23 @@ angular.module('mappifyApp')
     $scope.toggleMaxBoxDraw();
     
     var demoConcept = mappifyConceptsService.createAndAddConcept('Demo');
+//    var query =
+//      'SELECT * {\n' +
+//      '  ?r a dbo:Castle . \n' +
+//      '  ?r rdfs:label ?label . \n' +
+//      '  ?r foaf:depiction ?d . \n' +
+//      '  ?r geo:long ?long . \n' +
+//      '  ?r geo:lat ?lat . \n' +
+//      '}';
     var query =
       'SELECT * {\n' +
-      '  ?r a dbo:Castle . \n' +
-      '  ?r rdfs:label ?label . \n' +
-      '  ?r foaf:depiction ?d . \n' +
-      '  ?r geo:long ?long . \n' +
-      '  ?r geo:lat ?lat . \n' +
-      '}';
+      '  ?r a dbo:Castle .\n' +
+      '  ?r rdfs:label ?label .\n' +
+      '  Optional { ?r foaf:depiction ?d }\n' +
+      '  Filter(!Bound(?d))\n' +
+      '  ?r geo:long ?long .\n' +
+      '  ?r geo:lat ?lat .\n'+
+      '}'; 
     mappifyConceptsService.setSponateQuery(demoConcept, query);
     mappifyConceptsService.setMarkerIconPath(
         demoConcept, 'images/markers/castle-2.png');
@@ -293,7 +302,8 @@ angular.module('mappifyApp')
       ' long: "?long"}';
     mappifyConceptsService.setSponateMapping(demoConcept, demoSponateMapping);
     
-    var demoInfoTemplate = '{{name}}\n<img src="{{pic.slice(1, -1)}}">';
+//    var demoInfoTemplate = '{{name}}\n<img src="{{pic.slice(1, -1)}}">';
+    var demoInfoTemplate = '{{name}}\n<div ng-hide="pic">No image</div>\n<img src="{{pic.slice(1, -1)}}">';
     mappifyConceptsService.setInfoTemplate(demoConcept, demoInfoTemplate);
   });
 
