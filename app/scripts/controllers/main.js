@@ -300,7 +300,7 @@ angular.module('mappifyApp')
       ' ?r dbo:abstract ?abs . \n' +
       ' ?r geo:lat ?lat .\n' +
       ' ?r geo:long ?long .\n' +
-      ' OPTIONAL { ?r foaf:depiction ?d } \n' +
+      ' OPTIONAL { ?r foaf:depiction ?d } ' +
       '}';
     mappifyConceptsService.setSponateQuery(demoConcept, query);
     mappifyConceptsService.setMarkerIconPath(
