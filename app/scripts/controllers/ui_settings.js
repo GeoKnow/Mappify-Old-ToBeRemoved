@@ -45,8 +45,10 @@ angular.module('mappifyApp')
       ' ?r dbo:location dbpedia:England .\n' +
       ' ?r rdfs:label ?label .\n' +
       ' ?r dbo:abstract ?abst .\n' +
-      ' ?r <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .\n' +
-      ' ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .}';
+      ' ?r geo:long ?long .\n' +
+      ' ?r geo:lat ?lat .\n' +
+      ' OPTIONAL { ?r foaf:depiction ?d }' +
+      '}';
     
     $scope.$on('mappify-concept-selection-changed', function() {
       var concept = $scope.selectedMappifyConcept;
@@ -88,7 +90,9 @@ angular.module('mappifyApp')
       ' name : "?label",\n' + 
       ' abstract: "?abst",\n' +
       ' lat: "?lat",\n' +
-      ' long: "?long"}';
+      ' long: "?long",\n' +
+      ' pic: "?d"\n' +
+      '}';
     $scope.$on('mappify-concept-selection-changed', function() {
       var concept = $scope.selectedMappifyConcept;
       var sponateMapping = mappifyConceptsService.getSponateMapping(concept);
@@ -110,6 +114,8 @@ angular.module('mappifyApp')
      */
     var exampleInfoTemplate = 
       '{{name}}\n' +
+      '<div ng-hide="pic">(No image available.)</div>\n' +
+      '<img src="{{pic.slice(1, -1)}}">\n' +
       '<br/><i>{{abstract}}</i>';
     $scope.$on('mappify-concept-selection-changed', function(){
       var concept = $scope.selectedMappifyConcept;

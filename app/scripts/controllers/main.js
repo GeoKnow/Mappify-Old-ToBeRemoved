@@ -198,7 +198,7 @@ angular.module('mappifyApp')
       for (var i = 0; i < mappifyConcepts.length; i++) {
         var concept = mappifyConcepts[i];
         if (concept.sponateQuery === null) {
-          console.log('[WARN] concept ' + this.concept.name +
+          console.log('[WARN] concept ' + concept.name +
           ' has no saved SPONATE mapping. Skipping...');
           continue;
         }
@@ -320,7 +320,7 @@ angular.module('mappifyApp')
 //    var demoInfoTemplate = '{{name}}\n<img src="{{pic.slice(1, -1)}}">';
     var demoInfoTemplate =
       '{{name}}\n' +
-      '<div ng-hide="pic">No image</div>\n' +
+      '<div ng-hide="pic">(No image available.)</div>\n' +
       '<img src="{{pic.slice(1, -1)}}">\n' +
       '<br/><i>{{abstract}}<i/>';
 //    var demoInfoTemplate = '{{name}}\n<div ng-hide="pic">No image</div>\n<img src="{{pic.slice(1, -1)}}">';
