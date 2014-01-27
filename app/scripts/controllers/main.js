@@ -300,7 +300,7 @@ angular.module('mappifyApp')
       ' ?r dbo:abstract ?abs . \n' +
       ' ?r geo:lat ?lat .\n' +
       ' ?r geo:long ?long .\n' +
-      ' OPTIONAL { ?r foaf:depiction ?d } ' +
+      ' OPTIONAL { ?r foaf:depiction ?d } \n' +
       '}';
     mappifyConceptsService.setSponateQuery(demoConcept, query);
     mappifyConceptsService.setMarkerIconPath(
@@ -313,8 +313,7 @@ angular.module('mappifyApp')
       ' abstract: "?abs",\n' +
       ' lat: "?lat",\n' +
       ' long: "?long",\n' +
-      ' pic: "?d"\n' +
-      '}';
+      ' pic: "?d" }';
     mappifyConceptsService.setSponateMapping(demoConcept, demoSponateMapping);
     
 //    var demoInfoTemplate = '{{name}}\n<img src="{{pic.slice(1, -1)}}">';

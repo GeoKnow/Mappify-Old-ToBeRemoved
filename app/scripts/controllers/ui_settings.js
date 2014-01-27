@@ -91,8 +91,7 @@ angular.module('mappifyApp')
       ' abstract: "?abst",\n' +
       ' lat: "?lat",\n' +
       ' long: "?long",\n' +
-      ' pic: "?d"\n' +
-      '}';
+      ' pic: "?d" }';
     $scope.$on('mappify-concept-selection-changed', function() {
       var concept = $scope.selectedMappifyConcept;
       var sponateMapping = mappifyConceptsService.getSponateMapping(concept);
