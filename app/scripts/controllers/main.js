@@ -300,6 +300,7 @@ angular.module('mappifyApp')
       ' ?r dbo:abstract ?abs . \n' +
       ' ?r geo:lat ?lat .\n' +
       ' ?r geo:long ?long .\n' +
+      ' OPTIONAL { ?r foaf:depiction ?d } \n' +
       '}';
     mappifyConceptsService.setSponateQuery(demoConcept, query);
     mappifyConceptsService.setMarkerIconPath(
@@ -311,11 +312,17 @@ angular.module('mappifyApp')
       ' name : "?label",\n' + 
       ' abstract: "?abs",\n' +
       ' lat: "?lat",\n' +
-      ' long: "?long"}';
+      ' long: "?long",\n' +
+      ' pic: "?d"\n' +
+      '}';
     mappifyConceptsService.setSponateMapping(demoConcept, demoSponateMapping);
     
 //    var demoInfoTemplate = '{{name}}\n<img src="{{pic.slice(1, -1)}}">';
-    var demoInfoTemplate = '{{name}}\n<br/><i>{{abstract}}<i/>';
+    var demoInfoTemplate =
+      '{{name}}\n' +
+      '<div ng-hide="pic">No image</div>\n' +
+      '<img src="{{pic.slice(1, -1)}}">\n' +
+      '<br/><i>{{abstract}}<i/>';
 //    var demoInfoTemplate = '{{name}}\n<div ng-hide="pic">No image</div>\n<img src="{{pic.slice(1, -1)}}">';
     mappifyConceptsService.setInfoTemplate(demoConcept, demoInfoTemplate);
   });
