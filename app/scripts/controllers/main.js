@@ -74,10 +74,10 @@ angular.module('mappifyApp')
     map.setCenter(
         //  8.85, 53.08  (10.3) --> Bremen
         // 12.35, 51.35  (10)   --> Leipzig
-        new OpenLayers.LonLat(8.85, 53.08).transform(
+        new OpenLayers.LonLat(-3, 55).transform(
             new OpenLayers.Projection('EPSG:4326'),
             map.getProjectionObject()),
-        4
+        5.4
     );
     
     // -- layers for initial and maximal map section --
@@ -248,10 +248,16 @@ angular.module('mappifyApp')
      * ========================================================================
      */
     // init area
-    var pi1 = new OpenLayers.Geometry.Point(-365006.1740580802, 5608490.0595113);
-    var pi2 = new OpenLayers.Geometry.Point(-365006.1740580802, 7232624.036288699);
-    var pi3 = new OpenLayers.Geometry.Point(2129898.4288228005, 7232624.036288701);
-    var pi4 = new OpenLayers.Geometry.Point(2129898.4288228005, 5608490.0595113);
+//    var pi1 = new OpenLayers.Geometry.Point(-365006.1740580802, 5608490.0595113);
+//    var pi2 = new OpenLayers.Geometry.Point(-365006.1740580802, 7232624.036288699);
+//    var pi3 = new OpenLayers.Geometry.Point(2129898.4288228005, 7232624.036288701);
+//    var pi4 = new OpenLayers.Geometry.Point(2129898.4288228005, 5608490.0595113);
+
+    var pi1 = new OpenLayers.Geometry.Point(-800000, 6300000);
+    var pi2 = new OpenLayers.Geometry.Point(-800000, 7500000);
+    var pi3 = new OpenLayers.Geometry.Point(300000, 7500000);
+    var pi4 = new OpenLayers.Geometry.Point(300000, 6300000);
+
     var ri = new OpenLayers.Geometry.LinearRing([pi1, pi2, pi3, pi4, pi1]);
     var poli = new OpenLayers.Geometry.Polygon(ri);
     $scope.initBtn.coords = poli;
@@ -260,10 +266,15 @@ angular.module('mappifyApp')
     initBoxLayer.addFeatures([feati]);
     
     // max area
-    var pm1 = new OpenLayers.Geometry.Point(-1646702.2641655002, 5001885.803124601);
-    var pm2 = new OpenLayers.Geometry.Point(-1646702.2641655002, 7937067.6888668);
-    var pm3 = new OpenLayers.Geometry.Point(3587705.4320746996, 7937067.6888668);
-    var pm4 = new OpenLayers.Geometry.Point(3587705.4320747014, 5001885.803124601);
+//    var pm1 = new OpenLayers.Geometry.Point(-1646702.2641655002, 5001885.803124601);
+//    var pm2 = new OpenLayers.Geometry.Point(-1646702.2641655002, 7937067.6888668);
+//    var pm3 = new OpenLayers.Geometry.Point(3587705.4320746996, 7937067.6888668);
+//    var pm4 = new OpenLayers.Geometry.Point(3587705.4320747014, 5001885.803124601);
+    
+    var pm1 = new OpenLayers.Geometry.Point(-1400000, 6100000);
+    var pm2 = new OpenLayers.Geometry.Point(-1400000, 8700000);
+    var pm3 = new OpenLayers.Geometry.Point(450000, 8700000);
+    var pm4 = new OpenLayers.Geometry.Point(450000, 6100000);
     var rm = new OpenLayers.Geometry.LinearRing([pm1, pm2, pm3, pm4, pm1]);
     var polm = new OpenLayers.Geometry.Polygon(rm);
     $scope.maxBtn.coords = polm;
@@ -272,7 +283,7 @@ angular.module('mappifyApp')
     maxBoxLayer.addFeatures([featm]);
     $scope.toggleMaxBoxDraw();
     
-    var demoConcept = mappifyConceptsService.createAndAddConcept('Demo');
+    var demoConcept = mappifyConceptsService.createAndAddConcept('Airports');
 //    var query =
 //      'SELECT * {\n' +
 //      '  ?r a dbo:Castle . \n' +
@@ -281,29 +292,31 @@ angular.module('mappifyApp')
 //      '  ?r geo:long ?long . \n' +
 //      '  ?r geo:lat ?lat . \n' +
 //      '}';
-    var query =
-      'SELECT * {\n' +
-      '  ?r a dbo:Castle .\n' +
-      '  ?r rdfs:label ?label .\n' +
-      '  Optional { ?r foaf:depiction ?d }\n' +
-      '  Filter(!Bound(?d))\n' +
-      '  ?r geo:long ?long .\n' +
-      '  ?r geo:lat ?lat .\n'+
-      '}'; 
+    var query = 
+      'SELECT DISTINCT * {\n' +
+      ' ?r a dbo:Airport .\n' +
+      ' ?r dbo:location dbpedia:England .\n' +
+      ' ?r rdfs:label ?label .\n' +
+      ' ?r dbo:abstract ?abs . \n' +
+      ' ?r geo:lat ?lat .\n' +
+      ' ?r geo:long ?long .\n' +
+      '}';
     mappifyConceptsService.setSponateQuery(demoConcept, query);
     mappifyConceptsService.setMarkerIconPath(
-        demoConcept, 'images/markers/castle-2.png');
+        demoConcept, 'images/markers/airport.png');
+//        demoConcept, 'images/markers/castle-2.png');
     
     var demoSponateMapping =
       '{id: "?r", \n' +
       ' name : "?label",\n' + 
-      ' pic: "?d",\n' +
+      ' abstract: "?abs",\n' +
       ' lat: "?lat",\n' +
       ' long: "?long"}';
     mappifyConceptsService.setSponateMapping(demoConcept, demoSponateMapping);
     
 //    var demoInfoTemplate = '{{name}}\n<img src="{{pic.slice(1, -1)}}">';
-    var demoInfoTemplate = '{{name}}\n<div ng-hide="pic">No image</div>\n<img src="{{pic.slice(1, -1)}}">';
+    var demoInfoTemplate = '{{name}}\n<br/><i>{{abstract}}<i/>';
+//    var demoInfoTemplate = '{{name}}\n<div ng-hide="pic">No image</div>\n<img src="{{pic.slice(1, -1)}}">';
     mappifyConceptsService.setInfoTemplate(demoConcept, demoInfoTemplate);
   });
 

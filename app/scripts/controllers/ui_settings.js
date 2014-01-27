@@ -32,18 +32,27 @@ angular.module('mappifyApp')
      * SPONATE query settings
      * ========================================================================
      */
-    var demoQuery =
-      'SELECT * WHERE {\n' + 
-        '    ?r rdfs:label ?label .\n' +
-        '    ?r foaf:depiction ?d .\n' +
-        '    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .\n' +
-        '    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .} LIMIT 1000';
+//    var exampleQuery =
+//      'SELECT * WHERE {\n' + 
+//        '    ?r rdfs:label ?label .\n' +
+//        '    ?r foaf:depiction ?d .\n' +
+//        '    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .\n' +
+//        '    ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .} LIMIT 1000';
+    
+    var exampleQuery =
+    'SELECT * WHERE {\n' +
+      ' ?r a dbo:Museum .\n' + 
+      ' ?r dbo:location dbpedia:England .\n' +
+      ' ?r rdfs:label ?label .\n' +
+      ' ?r dbo:abstract ?abst .\n' +
+      ' ?r <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?long .\n' +
+      ' ?r <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat .}';
     
     $scope.$on('mappify-concept-selection-changed', function() {
       var concept = $scope.selectedMappifyConcept;
       var sponateQuery = mappifyConceptsService.getSponateQuery(concept);
       if (sponateQuery == null) {
-        $scope.$parent.sponateQuery = demoQuery;
+        $scope.$parent.sponateQuery = exampleQuery;
       } else {
         $scope.$parent.sponateQuery = sponateQuery;
       }
@@ -75,8 +84,9 @@ angular.module('mappifyApp')
      * ========================================================================
      */
     var exampleSponateMapping =
-      '{id: "?r", name : "?label",\n' + 
-      ' pic: "?d",\n' +
+      '{id: "?r", \n' +
+      ' name : "?label",\n' + 
+      ' abstract: "?abst",\n' +
       ' lat: "?lat",\n' +
       ' long: "?long"}';
     $scope.$on('mappify-concept-selection-changed', function() {
@@ -100,7 +110,7 @@ angular.module('mappifyApp')
      */
     var exampleInfoTemplate = 
       '{{name}}\n' +
-      '<img src="{{pic.slice(1,-1)}}">';
+      '<br/><i>{{abstract}}</i>';
     $scope.$on('mappify-concept-selection-changed', function(){
       var concept = $scope.selectedMappifyConcept;
       var infoTemplate = mappifyConceptsService.getInfoTemplate(concept);
