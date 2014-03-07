@@ -42,7 +42,6 @@ angular.module('mappifyApp')
     var exampleQuery =
     'SELECT * WHERE {\n' +
       ' ?r a dbo:Museum .\n' + 
-      ' ?r dbo:location dbpedia:England .\n' +
       ' ?r rdfs:label ?label .\n' +
       ' ?r dbo:abstract ?abst .\n' +
       ' ?r geo:long ?long .\n' +
